@@ -1,6 +1,4 @@
-if (typeof window !== "undefined") {
-  throw new Error("The database client can only be used in a server environment.");
-}
+import "server-only";
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";

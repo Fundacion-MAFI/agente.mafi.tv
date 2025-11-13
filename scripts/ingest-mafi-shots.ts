@@ -1,4 +1,3 @@
-import "./server-only-shim";
 import "dotenv/config";
 
 import crypto from "node:crypto";
@@ -6,10 +5,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 
 import { generateShotEmbeddings } from "@/lib/ai/mafi-embeddings";
+import { db } from "@/lib/db/client";
 import { shotEmbeddings, shots, type Shot } from "@/lib/db/schema";
 
 const DATA_DIRECTORY = path.resolve(process.cwd(), "data/mafi-shots");
@@ -111,145 +109,126 @@ function parseValue(value: string): FrontMatterValue {
 }
 
 async function main() {
-  const connectionString = process.env.POSTGRES_URL;
-
-  if (!connectionString) {
-    throw new Error(
-      "POSTGRES_URL environment variable is required to run the ingestion script."
-    );
-  }
-
-  const client = postgres(connectionString, {
-    max: 1,
-    onnotice: () => {},
-  });
-  const db = drizzle(client);
-
   const files = await fs.readdir(DATA_DIRECTORY);
   const markdownFiles = files.filter((file) => file.endsWith(".md")).sort();
 
-  try {
-    const existingShots = await db.select().from(shots);
-    const shotsBySlug = new Map(existingShots.map((shot) => [shot.slug, shot]));
-    const seenSlugs = new Set<string>();
+  const existingShots = await db.select().from(shots);
+  const shotsBySlug = new Map(existingShots.map((shot) => [shot.slug, shot]));
+  const seenSlugs = new Set<string>();
 
-    let upserted = 0;
-    let skipped = 0;
+  let upserted = 0;
+  let skipped = 0;
 
-    for (const fileName of markdownFiles) {
-      const filePath = path.join(DATA_DIRECTORY, fileName);
-      const raw = await fs.readFile(filePath, "utf8");
-      const { data, body } = parseFrontMatter(raw);
+  for (const fileName of markdownFiles) {
+    const filePath = path.join(DATA_DIRECTORY, fileName);
+    const raw = await fs.readFile(filePath, "utf8");
+    const { data, body } = parseFrontMatter(raw);
 
-      const slug = path.basename(fileName, path.extname(fileName));
-      seenSlugs.add(slug);
+    const slug = path.basename(fileName, path.extname(fileName));
+    seenSlugs.add(slug);
 
-      const title = ensureString(data.title, "title");
-      const description = ensureDescription(data.description, body, slug);
-      const vimeoUrl = ensureString(
-        data.vimeo_link ?? data.vimeoUrl ?? data.vimeo,
-        "vimeo_link"
-      );
-
-      const metadata = {
-        title,
-        description,
-        vimeoUrl,
-        date: optionalString(data.date),
-        place: optionalString(data.place),
-        author: optionalString(data.author),
-        geotag: optionalString(data.geotag),
-        tags: Array.isArray(data.tags)
-          ? (data.tags as string[])
-          : optionalString(data.tags)
-              ?.split(",")
-              .map((tag) => tag.trim()) ?? null,
-      } satisfies Partial<Shot>;
-
-      const checksum = crypto.createHash("sha256").update(raw).digest("hex");
-      const existing = shotsBySlug.get(slug);
-
-      if (existing && existing.checksum === checksum) {
-        skipped += 1;
-        continue;
-      }
-
-      const now = new Date();
-      let shotId: string;
-
-      if (existing) {
-        await db
-          .update(shots)
-          .set({
-            ...metadata,
-            slug,
-            checksum,
-            updatedAt: now,
-          })
-          .where(eq(shots.id, existing.id));
-        shotId = existing.id;
-      } else {
-        const [inserted] = await db
-          .insert(shots)
-          .values({
-            ...metadata,
-            slug,
-            checksum,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .returning({ id: shots.id });
-
-        shotId = inserted.id;
-      }
-
-      await db.delete(shotEmbeddings).where(eq(shotEmbeddings.shotId, shotId));
-
-      const textForEmbedding = [
-        title,
-        description,
-        metadata.place,
-        metadata.author,
-        metadata.date,
-        metadata.tags?.join(", "),
-        body.trim(),
-      ]
-        .flatMap((value) => (value ? [value] : []))
-        .join("\n\n");
-
-      const embeddings = await generateShotEmbeddings(textForEmbedding);
-
-      if (embeddings.length > 0) {
-        await db.insert(shotEmbeddings).values(
-          embeddings.map((embedding) => ({
-            shotId,
-            content: embedding.content,
-            embedding: embedding.embedding,
-          }))
-        );
-      }
-
-      upserted += 1;
-    }
-
-    const idsToDelete = existingShots
-      .filter((shot) => !seenSlugs.has(shot.slug))
-      .map((shot) => shot.id);
-
-    if (idsToDelete.length > 0) {
-      await db.delete(shotEmbeddings).where(inArray(shotEmbeddings.shotId, idsToDelete));
-      await db.delete(shots).where(inArray(shots.id, idsToDelete));
-    }
-
-    const deleted = idsToDelete.length;
-
-    // eslint-disable-next-line no-console
-    console.log(
-      `MAFI ingestion complete. Upserted: ${upserted}, skipped: ${skipped}, deleted: ${deleted}`
+    const title = ensureString(data.title, "title");
+    const description = ensureString(data.description, "description");
+    const vimeoUrl = ensureString(
+      data.vimeo_link ?? data.vimeoUrl ?? data.vimeo,
+      "vimeo_link"
     );
-  } finally {
-    await client.end({ timeout: 5 });
+
+    const metadata = {
+      title,
+      description,
+      vimeoUrl,
+      date: optionalString(data.date),
+      place: optionalString(data.place),
+      author: optionalString(data.author),
+      geotag: optionalString(data.geotag),
+      tags: Array.isArray(data.tags)
+        ? (data.tags as string[])
+        : optionalString(data.tags)
+          ?.split(",")
+          .map((tag) => tag.trim()) ?? null,
+    } satisfies Partial<Shot>;
+
+    const checksum = crypto.createHash("sha256").update(raw).digest("hex");
+    const existing = shotsBySlug.get(slug);
+
+    if (existing && existing.checksum === checksum) {
+      skipped += 1;
+      continue;
+    }
+
+    const now = new Date();
+    let shotId: string;
+
+    if (existing) {
+      await db
+        .update(shots)
+        .set({
+          ...metadata,
+          slug,
+          checksum,
+          updatedAt: now,
+        })
+        .where(eq(shots.id, existing.id));
+      shotId = existing.id;
+    } else {
+      const [inserted] = await db
+        .insert(shots)
+        .values({
+          ...metadata,
+          slug,
+          checksum,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: shots.id });
+
+      shotId = inserted.id;
+    }
+
+    await db.delete(shotEmbeddings).where(eq(shotEmbeddings.shotId, shotId));
+
+    const textForEmbedding = [
+      title,
+      description,
+      metadata.place,
+      metadata.author,
+      metadata.date,
+      metadata.tags?.join(", "),
+      body.trim(),
+    ]
+      .flatMap((value) => (value ? [value] : []))
+      .join("\n\n");
+
+    const embeddings = await generateShotEmbeddings(textForEmbedding);
+
+    if (embeddings.length > 0) {
+      await db.insert(shotEmbeddings).values(
+        embeddings.map((embedding) => ({
+          shotId,
+          content: embedding.content,
+          embedding: embedding.embedding,
+        }))
+      );
+    }
+
+    upserted += 1;
   }
+
+  const slugsToDelete = existingShots
+    .filter((shot) => !seenSlugs.has(shot.slug))
+    .map((shot) => shot.id);
+
+  if (slugsToDelete.length > 0) {
+    await db.delete(shots).where(inArray(shots.id, slugsToDelete));
+  }
+
+  const deleted = slugsToDelete.length;
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `MAFI ingestion complete. Upserted: ${upserted}, skipped: ${skipped}, deleted: ${deleted}`
+  );
 }
 
 function ensureString(value: FrontMatterValue, field: string): string {
@@ -257,29 +236,6 @@ function ensureString(value: FrontMatterValue, field: string): string {
     return value.trim();
   }
   throw new Error(`Missing required field "${field}" in front matter.`);
-}
-
-function ensureDescription(
-  value: FrontMatterValue,
-  body: string,
-  slug: string
-): string {
-  if (typeof value === "string" && value.trim()) {
-    return value.trim();
-  }
-
-  const fallback = body
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .find(Boolean);
-
-  if (fallback) {
-    return fallback.length > 500 ? `${fallback.slice(0, 497)}...` : fallback;
-  }
-
-  throw new Error(
-    `Missing required field "description" in front matter and body for slug "${slug}".`
-  );
 }
 
 function optionalString(value: FrontMatterValue): string | null {
