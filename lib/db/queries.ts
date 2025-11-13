@@ -1,4 +1,6 @@
-import "server-only";
+if (typeof window !== "undefined") {
+  throw new Error("Database queries can only be used in a server environment.");
+}
 
 import {
   and,
