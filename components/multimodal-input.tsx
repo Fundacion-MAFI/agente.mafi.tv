@@ -19,10 +19,16 @@ import {
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
 import { saveChatModelAsCookie } from "@/app/(chat)/actions";
-import { SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { chatModels } from "@/lib/ai/models";
 import { myProvider } from "@/lib/ai/providers";
-import type { Attachment, ChatMessage } from "@/lib/types";
+import type { Attachment, ChatMessage, ChatMode } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { cn } from "@/lib/utils";
 import { Context } from "./elements/context";
@@ -62,6 +68,8 @@ function PureMultimodalInput({
   selectedVisibilityType,
   selectedModelId,
   onModelChange,
+  selectedMode,
+  onModeChange,
   usage,
 }: {
   chatId: string;
@@ -78,6 +86,8 @@ function PureMultimodalInput({
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
+  selectedMode: ChatMode;
+  onModeChange?: (mode: ChatMode) => void;
   usage?: AppUsage;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -378,6 +388,10 @@ function PureMultimodalInput({
               onModelChange={onModelChange}
               selectedModelId={selectedModelId}
             />
+            <ModeSelectorCompact
+              onModeChange={onModeChange}
+              selectedMode={selectedMode}
+            />
           </PromptInputTools>
 
           {status === "submitted" ? (
@@ -414,6 +428,9 @@ export const MultimodalInput = memo(
       return false;
     }
     if (prevProps.selectedModelId !== nextProps.selectedModelId) {
+      return false;
+    }
+    if (prevProps.selectedMode !== nextProps.selectedMode) {
       return false;
     }
 
@@ -507,6 +524,66 @@ function PureModelSelectorCompact({
 }
 
 const ModelSelectorCompact = memo(PureModelSelectorCompact);
+
+const modeOptions: Array<{
+  value: ChatMode;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "default",
+    label: "Conversación libre",
+    description: "Asistente general sin búsqueda en el archivo",
+  },
+  {
+    value: "archivo-libre",
+    label: "Exploración libre",
+    description: "Co-narración con planos sugeridos del archivo",
+  },
+  {
+    value: "archivo-curatorial",
+    label: "Ruta curatorial",
+    description: "Secuencia con un hilo curatorial para investigar",
+  },
+  {
+    value: "archivo-investigador",
+    label: "Modo investigador",
+    description: "Lectura analítica con pistas metodológicas",
+  },
+];
+
+function ModeSelectorCompact({
+  selectedMode,
+  onModeChange,
+}: {
+  selectedMode: ChatMode;
+  onModeChange?: (mode: ChatMode) => void;
+}) {
+  return (
+    <Select
+      value={selectedMode}
+      onValueChange={(value) => onModeChange?.(value as ChatMode)}
+    >
+      <SelectTrigger className="h-8 w-[160px] justify-start rounded-lg px-2 text-left text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="min-w-[240px] p-0">
+        <div className="flex flex-col gap-px">
+          {modeOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              <div className="truncate font-medium text-xs">
+                {option.label}
+              </div>
+              <div className="mt-px truncate text-[10px] leading-tight text-muted-foreground">
+                {option.description}
+              </div>
+            </SelectItem>
+          ))}
+        </div>
+      </SelectContent>
+    </Select>
+  );
+}
 
 function PureStopButton({
   stop,
