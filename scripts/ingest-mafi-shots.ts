@@ -39,6 +39,29 @@ async function getMarkdownFiles() {
   return files.filter(file => file.endsWith(".md")).sort();
 }
 
+async function ensureShotsSchema() {
+  const [result] = await sqlClient<{
+    shots: string | null;
+    shotEmbeddings: string | null;
+  }>`
+    SELECT
+      to_regclass('public.shots') AS shots,
+      to_regclass('public.shot_embeddings') AS "shotEmbeddings"
+  `;
+
+  const missingTables = [];
+  if (!result?.shots) missingTables.push("shots");
+  if (!result?.shotEmbeddings) missingTables.push("shot_embeddings");
+
+  if (missingTables.length > 0) {
+    console.warn(
+      `⚠️ Missing tables (${missingTables.join(", ")}). Run \`pnpm db:migrate\` first to provision the schema.`
+    );
+    await sqlClient.end();
+    process.exit(0);
+  }
+}
+
 function sha256(content: string) {
   return crypto.createHash("sha256").update(content).digest("hex");
 }
@@ -153,6 +176,7 @@ async function pruneRemovedShots(processedSlugs: Set<string>) {
 }
 
 async function main() {
+  await ensureShotsSchema();
   console.log("📼 Ingesting MAFI shots from", dataDirectory);
   const files = await getMarkdownFiles();
   const processedSlugs = new Set<string>();
