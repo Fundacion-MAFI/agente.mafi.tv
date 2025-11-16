@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { ChatHeader } from "@/components/chat-header";
@@ -21,6 +21,7 @@ import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import type { Vote } from "@/lib/db/schema";
+import { chatModels } from "@/lib/ai/models";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage, MessageMode } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
@@ -59,15 +60,43 @@ export function Chat({
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>("");
+  const initialModel = chatModels.find((model) => model.id === initialChatModel);
+
   const [usage, setUsage] = useState<AppUsage | undefined>(initialLastContext);
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
-  const [messageMode, setMessageMode] = useState<MessageMode>("default");
+  const [messageMode, setMessageMode] = useState<MessageMode>(
+    initialModel?.forcedMode ?? "default"
+  );
 
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
   }, [currentModelId]);
+
+  const handleModelChange = useCallback((modelId: string) => {
+    setCurrentModelId(modelId);
+    setMessageMode((prevMode) => {
+      const selectedModel = chatModels.find((model) => model.id === modelId);
+
+      if (selectedModel?.forcedMode) {
+        return selectedModel.forcedMode;
+      }
+
+      return prevMode === "archivo" ? "default" : prevMode;
+    });
+  }, []);
+
+  const handleModeChange = useCallback(
+    (mode: MessageMode) => {
+      if (mode === "archivo" && currentModelId !== "film-agent") {
+        setCurrentModelId("film-agent");
+      }
+
+      setMessageMode(mode);
+    },
+    [currentModelId]
+  );
 
   const {
     messages,
@@ -171,7 +200,7 @@ export function Chat({
           isReadonly={isReadonly}
           messages={messages}
           regenerate={regenerate}
-          selectedModelId={initialChatModel}
+          selectedModelId={currentModelId}
           setMessages={setMessages}
           status={status}
           votes={votes}
@@ -184,12 +213,12 @@ export function Chat({
               chatId={id}
               input={input}
               messages={messages}
-              onModelChange={setCurrentModelId}
+              onModelChange={handleModelChange}
               selectedModelId={currentModelId}
               selectedVisibilityType={visibilityType}
               sendMessage={sendMessage}
               messageMode={messageMode}
-              onModeChange={setMessageMode}
+              onModeChange={handleModeChange}
               setAttachments={setAttachments}
               setInput={setInput}
               setMessages={setMessages}

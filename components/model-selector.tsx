@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { chatModels } from "@/lib/ai/models";
+import type { MessageMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CheckCircleFillIcon, ChevronDownIcon } from "./icons";
 
@@ -19,9 +20,11 @@ export function ModelSelector({
   session,
   selectedModelId,
   className,
+  onModeChange,
 }: {
   session: Session;
   selectedModelId: string;
+  onModeChange?: (mode: MessageMode) => void;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
@@ -79,6 +82,7 @@ export function ModelSelector({
                 startTransition(() => {
                   setOptimisticModelId(id);
                   saveChatModelAsCookie(id);
+                  onModeChange?.(chatModel.forcedMode ?? "default");
                 });
               }}
             >

@@ -388,6 +388,7 @@ function PureMultimodalInput({
             />
             <ModelSelectorCompact
               onModelChange={onModelChange}
+              onModeChange={onModeChange}
               selectedModelId={selectedModelId}
             />
           </PromptInputTools>
@@ -529,9 +530,11 @@ const ModeSelector = memo(PureModeSelector);
 function PureModelSelectorCompact({
   selectedModelId,
   onModelChange,
+  onModeChange,
 }: {
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
+  onModeChange?: (mode: MessageMode) => void;
 }) {
   const [optimisticModelId, setOptimisticModelId] = useState(selectedModelId);
 
@@ -550,6 +553,7 @@ function PureModelSelectorCompact({
         if (model) {
           setOptimisticModelId(model.id);
           onModelChange?.(model.id);
+          onModeChange?.(model.forcedMode ?? "default");
           startTransition(() => {
             saveChatModelAsCookie(model.id);
           });
