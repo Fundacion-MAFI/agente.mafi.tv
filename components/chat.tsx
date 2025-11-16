@@ -151,10 +151,12 @@ export function Chat({
     },
     onFinish: () => {
       setLastStreamActivityAt(null);
+      clearStreamWatchdogTimeout();
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
     onError: (error) => {
       setLastStreamActivityAt(null);
+      clearStreamWatchdogTimeout();
       if (error instanceof ChatSDKError) {
         // Check if it's a credit card error
         if (
@@ -193,21 +195,40 @@ export function Chat({
     clientWindow.posthog?.capture?.("chat_stream_watchdog_timeout", {
       chatId: id,
       status,
+      lastStreamActivityAt,
     });
 
     clientWindow.Sentry?.captureMessage?.("chat_stream_watchdog_timeout", {
-      extra: { chatId: id, status },
+      extra: { chatId: id, status, lastStreamActivityAt },
     });
 
     if (process.env.NODE_ENV !== "production") {
-      console.warn("Chat stream watchdog timeout", { chatId: id, status });
+      console.warn("Chat stream watchdog timeout", {
+        chatId: id,
+        status,
+        lastStreamActivityAt,
+      });
     }
-  }, [id, status]);
+  }, [id, status, lastStreamActivityAt]);
+
+  useEffect(() => {
+    if (status === "streaming") {
+      setLastStreamActivityAt((previous) => previous ?? Date.now());
+      return;
+    }
+
+    setLastStreamActivityAt(null);
+  }, [status]);
 
   const handleStreamWatchdogTimeout = useCallback(() => {
     clearStreamWatchdogTimeout();
     setLastStreamActivityAt(null);
     setShowStreamWatchdogAlert(true);
+    toast({
+      type: "error",
+      description:
+        "We stopped receiving data from the AI Gateway. Refresh the page or check the API connection.",
+    });
     logStreamWatchdogTelemetry();
     stop();
   }, [clearStreamWatchdogTimeout, logStreamWatchdogTelemetry, stop]);
@@ -218,9 +239,14 @@ export function Chat({
       return;
     }
 
+    const now = Date.now();
+    const lastActivity = lastStreamActivityAt ?? now;
+    const elapsed = now - lastActivity;
+    const timeoutDuration = Math.max(STREAM_WATCHDOG_TIMEOUT_MS - elapsed, 0);
+
     streamWatchdogTimeoutRef.current = setTimeout(
       handleStreamWatchdogTimeout,
-      STREAM_WATCHDOG_TIMEOUT_MS
+      timeoutDuration
     );
 
     return () => {
