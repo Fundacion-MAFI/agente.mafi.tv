@@ -36,3 +36,4 @@ export const chatModel = createMockModel();
 export const reasoningModel = createMockModel();
 export const titleModel = createMockModel();
 export const artifactModel = createMockModel();
+export const filmAgentModel = createMockModel();

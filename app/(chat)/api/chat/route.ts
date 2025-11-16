@@ -455,6 +455,7 @@ export async function POST(request: Request) {
     let finalMergedUsage: AppUsage | undefined;
 
     const isArchivoMode = message.mode === "archivo";
+    const allowedArchivoModels = new Set<ChatModel["id"]>(["film-agent"]);
 
     const handleArchivoRequest = async (
       dataStream: UIMessageStreamWriter<ChatMessage>
@@ -485,7 +486,10 @@ export async function POST(request: Request) {
           retrievedShots
         );
 
-        const archiveModel = myProvider.languageModel("chat-model");
+        const archivoModelId = allowedArchivoModels.has(selectedChatModel)
+          ? selectedChatModel
+          : "film-agent";
+        const archiveModel = myProvider.languageModel(archivoModelId);
         const objectResult = streamObject({
           model: archiveModel,
           system: AGENTE_FILMICO_SYSTEM_PROMPT,
