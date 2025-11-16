@@ -62,6 +62,8 @@ You will need to use the environment variables [defined in `.env.example`](.env.
 2. Link local instance with Vercel and GitHub accounts (creates `.vercel` directory): `vercel link`
 3. Download your environment variables: `vercel env pull`
 
+> For Neon/Vercel Postgres deployments expose both `POSTGRES_URL` (for application runtime) and `POSTGRES_URL_NON_POOLING` (for migrations/extensions). The `db:migrate` script automatically falls back to `POSTGRES_URL` when the non-pooling string is unavailable.
+
 ```bash
 pnpm install
 pnpm db:migrate # Setup database or apply latest database changes
@@ -69,3 +71,17 @@ pnpm dev
 ```
 
 Your app template should now be running on [localhost:3000](http://localhost:3000).
+
+### Updating the MAFI shot archive
+
+The MAFI archive stored in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script, which runs `pnpm db:migrate && pnpm ingest:mafi`. The same migration + ingestion pair now also runs before `next build`, so Vercel deployments always migrate and ingest during the build step without additional configuration. The ingestion script verifies that the `shots` tables exist and will instruct you to run the migration if they are missing. Run the ingestion script manually whenever you add or update markdown files to refresh the database incrementally:
+
+```bash
+pnpm ingest:mafi
+```
+
+Pass `-- --prune` to remove database records for files that no longer exist locally:
+
+```bash
+pnpm ingest:mafi -- --prune
+```
