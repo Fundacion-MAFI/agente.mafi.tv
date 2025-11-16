@@ -20,10 +20,11 @@ function PureSuggestedActions({
   messageMode,
 }: SuggestedActionsProps) {
   const suggestedActions = [
-    "What are the advantages of using Next.js?",
-    "Write code to demonstrate Dijkstra's algorithm",
-    "Help me write an essay about Silicon Valley",
-    "What is the weather in San Francisco?",
+    "Encuentra planos de manifestaciones en Santiago alrededor de 2019.",
+    "Arma una playlist con tomas nocturnas de ciudades latinoamericanas.",
+    "Muéstrame planos de archivo sobre pueblos originarios en Chile.",
+    "Busca secuencias de naturaleza del sur de Chile entre 2015 y 2018.",
+    "Sugiere planos de archivo con tomas aéreas de centros urbanos.",
   ];
 
   return (
