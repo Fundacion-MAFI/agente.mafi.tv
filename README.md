@@ -46,6 +46,10 @@ This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) t
 
 With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to direct LLM providers like [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://ai-sdk.dev/providers/ai-sdk-providers) with just a few lines of code.
 
+### Archivo (`film-agent`) gateway routing
+
+Archivo mode uses the `film-agent` model id defined in [`lib/ai/providers.ts`](lib/ai/providers.ts). That entry can point to a dedicated AI Gateway connection—set `AI_GATEWAY_FILM_AGENT_BASE_URL` and/or `AI_GATEWAY_FILM_AGENT_API_KEY` in your environment to route those requests through a different base URL or API key than the default chat models. When verifying the Archivo gateway, ensure those values match the credentials and endpoint of the archival deployment.
+
 ## Deploy Your Own
 
 You can deploy your own version of the Next.js AI Chatbot to Vercel with one click:
