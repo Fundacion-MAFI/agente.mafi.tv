@@ -23,7 +23,11 @@ import type { VisibilityType } from "@/components/visibility-selector";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import type { ChatModel } from "@/lib/ai/models";
 import { mafiAnswerSchema, type MafiAnswer } from "@/lib/ai/mafi-schema";
-import { retrieveRelevantShots, type RetrievedShot } from "@/lib/ai/mafi-retrieval";
+import {
+  ArchivoTimeoutError,
+  retrieveRelevantShots,
+  type RetrievedShot,
+} from "@/lib/ai/mafi-retrieval";
 import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
 import {
   AGENTE_FILMICO_SYSTEM_PROMPT,
@@ -63,6 +67,9 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
+const ARCHIVO_REQUEST_TIMEOUT_MS = 15_000;
+const ARCHIVO_OFFLINE_MESSAGE =
+  "El modo Archivo está temporalmente fuera de línea. Verifica la configuración del AI Gateway y vuelve a intentarlo.";
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
@@ -365,6 +372,54 @@ function createMafiPlaylistMessageStream({
   });
 }
 
+type ArchivoTimeoutPhase = "retrieval" | "playlist";
+
+function logArchivoTimeoutEvent({
+  chatId,
+  streamId,
+  phase,
+  error,
+}: {
+  chatId: string;
+  streamId: string;
+  phase: ArchivoTimeoutPhase;
+  error: unknown;
+}) {
+  const timeoutReason =
+    error instanceof ArchivoTimeoutError
+      ? error.reason
+      : error instanceof Error && error.name === "AbortError"
+        ? "abort_error"
+        : "unknown";
+  const timeoutContext =
+    error instanceof ArchivoTimeoutError ? error.context : undefined;
+  const timeoutMs = error instanceof ArchivoTimeoutError ? error.timeoutMs : undefined;
+
+  console.error("Archivo mode timeout", {
+    chatId,
+    streamId,
+    phase,
+    timeoutReason,
+    timeoutContext,
+    timeoutMs,
+    message: error instanceof Error ? error.message : String(error),
+  });
+}
+
+function isAbortSignalError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function sendArchivoOfflineResponse(
+  dataStream: UIMessageStreamWriter<ChatMessage>,
+): void {
+  dataStream.merge(
+    createMafiPlaylistMessageStream({
+      text: ARCHIVO_OFFLINE_MESSAGE,
+    }),
+  );
+}
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
@@ -475,11 +530,47 @@ export async function POST(request: Request) {
         return;
       }
 
+      const archivoAbortController = new AbortController();
+      const archivoAbortSignal = archivoAbortController.signal;
+      const archivoTimeoutId = setTimeout(() => {
+        archivoAbortController.abort(
+          new ArchivoTimeoutError({
+            context: "archivo playlist request",
+            timeoutMs: ARCHIVO_REQUEST_TIMEOUT_MS,
+            reason: "timeout",
+          })
+        );
+      }, ARCHIVO_REQUEST_TIMEOUT_MS);
+
+      const cleanupArchivoTimeout = () => {
+        clearTimeout(archivoTimeoutId);
+      };
+
+      const handleArchivoOffline = (
+        phase: ArchivoTimeoutPhase,
+        error: unknown,
+      ) => {
+        logArchivoTimeoutEvent({
+          chatId: id,
+          streamId,
+          phase,
+          error,
+        });
+        sendArchivoOfflineResponse(dataStream);
+      };
+
       let retrievedShots: RetrievedShot[] = [];
 
       try {
-        retrievedShots = await retrieveRelevantShots(questionText);
+        retrievedShots = await retrieveRelevantShots(questionText, {
+          signal: archivoAbortSignal,
+          timeoutMs: ARCHIVO_REQUEST_TIMEOUT_MS,
+        });
       } catch (error) {
+        if (error instanceof ArchivoTimeoutError || isAbortSignalError(error)) {
+          handleArchivoOffline("retrieval", error);
+          return;
+        }
         console.error("Error retrieving MAFI shots", error);
       }
 
@@ -498,6 +589,7 @@ export async function POST(request: Request) {
           system: AGENTE_FILMICO_SYSTEM_PROMPT,
           prompt: retrievalContext,
           schema: mafiAnswerSchema,
+          abortSignal: archivoAbortSignal,
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: "stream-object-mafi-playlist",
@@ -590,6 +682,10 @@ export async function POST(request: Request) {
           })
         );
       } catch (error) {
+        if (error instanceof ArchivoTimeoutError || isAbortSignalError(error)) {
+          handleArchivoOffline("playlist", error);
+          return;
+        }
         console.error("Agente Fílmico flow failed", error);
         dataStream.merge(
           createMafiPlaylistMessageStream({
@@ -597,6 +693,8 @@ export async function POST(request: Request) {
               "No pude crear una lista del archivo en este momento. Intenta nuevamente más tarde.",
           })
         );
+      } finally {
+        cleanupArchivoTimeout();
       }
     };
 
