@@ -206,7 +206,9 @@ export function Chat({
         chatId={id}
         input={input}
         isReadonly={isReadonly}
+        messageMode={messageMode}
         messages={messages}
+        onModeChange={setMessageMode}
         regenerate={regenerate}
         selectedModelId={currentModelId}
         selectedVisibilityType={visibilityType}
