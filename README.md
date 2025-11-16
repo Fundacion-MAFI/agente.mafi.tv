@@ -69,3 +69,17 @@ pnpm dev
 ```
 
 Your app template should now be running on [localhost:3000](http://localhost:3000).
+
+### Updating the MAFI shot archive
+
+The MAFI archive stored in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script, which runs `pnpm db:migrate && pnpm ingest:mafi`. Run the ingestion script manually whenever you add or update markdown files to refresh the database incrementally:
+
+```bash
+pnpm ingest:mafi
+```
+
+Pass `-- --prune` to remove database records for files that no longer exist locally:
+
+```bash
+pnpm ingest:mafi -- --prune
+```

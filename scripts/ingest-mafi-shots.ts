@@ -1,0 +1,187 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import crypto from "node:crypto";
+
+import matter from "gray-matter";
+import { config } from "dotenv";
+import { eq, inArray } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+
+import { generateShotEmbeddings } from "../lib/ai/mafi-embeddings";
+import { shotEmbeddings, shots } from "../lib/db/schema/shots";
+
+config({ path: ".env.local" });
+
+if (!process.env.POSTGRES_URL) {
+  throw new Error("POSTGRES_URL is not defined");
+}
+
+const dataDirectory = path.join(process.cwd(), "data", "mafi-shots");
+const shouldPrune = process.argv.includes("--prune");
+
+const sqlClient = postgres(process.env.POSTGRES_URL, { max: 1 });
+const db = drizzle(sqlClient);
+
+type ShotFrontMatter = {
+  title?: string;
+  description?: string;
+  vimeo_link?: string;
+  date?: string;
+  place?: string;
+  author?: string;
+  geotag?: string;
+  tags?: string[] | string;
+};
+
+async function getMarkdownFiles() {
+  const files = await fs.readdir(dataDirectory);
+  return files.filter(file => file.endsWith(".md")).sort();
+}
+
+function sha256(content: string) {
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
+
+function normalizeTags(raw: ShotFrontMatter["tags"]): string[] {
+  if (!raw) {
+    return [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.map(tag => tag.trim()).filter(Boolean);
+  }
+
+  return raw
+    .split(",")
+    .map(tag => tag.trim())
+    .filter(Boolean);
+}
+
+async function upsertShotFromFile(relativePath: string) {
+  const fullPath = path.join(dataDirectory, relativePath);
+  const fileContent = await fs.readFile(fullPath, "utf8");
+  const checksum = sha256(fileContent);
+  const { data, content } = matter(fileContent);
+  const metadata = data as ShotFrontMatter;
+  const slug = path.basename(relativePath, path.extname(relativePath));
+  const existing = await db
+    .select({ id: shots.id, checksum: shots.checksum })
+    .from(shots)
+    .where(eq(shots.slug, slug))
+    .limit(1);
+
+  const now = new Date();
+  const tags = normalizeTags(metadata.tags);
+  const contentBody = content.trim();
+  const description = metadata.description ?? (contentBody || null);
+  const fields = {
+    slug,
+    title: metadata.title ?? slug,
+    description,
+    vimeoUrl: metadata.vimeo_link ?? null,
+    date: metadata.date ?? null,
+    place: metadata.place ?? null,
+    author: metadata.author ?? null,
+    geotag: metadata.geotag ?? null,
+    tags,
+    checksum,
+    updatedAt: now,
+  } satisfies typeof shots.$inferInsert;
+
+  const [upserted] = await db
+    .insert(shots)
+    .values({ ...fields })
+    .onConflictDoUpdate({ target: shots.slug, set: fields })
+    .returning({ id: shots.id });
+
+  const shouldUpdateEmbeddings = existing.length === 0 || existing[0].checksum !== checksum;
+
+  if (!shouldUpdateEmbeddings) {
+    return { updatedEmbeddings: false };
+  }
+
+  const textToEmbed = [
+    metadata.title,
+    metadata.description,
+    metadata.place,
+    metadata.author,
+    metadata.date,
+    metadata.geotag,
+    tags.join(", "),
+    contentBody,
+  ]
+    .map(section => section?.trim())
+    .filter(Boolean)
+    .join("\n\n");
+
+  const embeddingChunks = await generateShotEmbeddings(textToEmbed);
+
+  await db.transaction(async tx => {
+    await tx.delete(shotEmbeddings).where(eq(shotEmbeddings.shotId, upserted.id));
+
+    if (embeddingChunks.length > 0) {
+      await tx.insert(shotEmbeddings).values(
+        embeddingChunks.map(chunk => ({
+          shotId: upserted.id,
+          content: chunk.content,
+          embedding: chunk.embedding,
+        }))
+      );
+    }
+  });
+
+  return { updatedEmbeddings: true };
+}
+
+async function pruneRemovedShots(processedSlugs: Set<string>) {
+  if (!shouldPrune) {
+    return 0;
+  }
+
+  const existing = await db.select({ slug: shots.slug }).from(shots);
+  const toDelete = existing
+    .map(record => record.slug)
+    .filter(slug => !processedSlugs.has(slug));
+
+  if (toDelete.length === 0) {
+    return 0;
+  }
+
+  await db.delete(shots).where(inArray(shots.slug, toDelete));
+  return toDelete.length;
+}
+
+async function main() {
+  console.log("📼 Ingesting MAFI shots from", dataDirectory);
+  const files = await getMarkdownFiles();
+  const processedSlugs = new Set<string>();
+  let embeddingsUpdated = 0;
+
+  for (const file of files) {
+    const slug = path.basename(file, path.extname(file));
+    processedSlugs.add(slug);
+    const result = await upsertShotFromFile(file);
+    if (result.updatedEmbeddings) {
+      embeddingsUpdated += 1;
+      console.log(`✅ Updated embeddings for shot ${slug}`);
+    } else {
+      console.log(`⚪️ Shot ${slug} is up to date`);
+    }
+  }
+
+  const pruned = await pruneRemovedShots(processedSlugs);
+
+  console.log(
+    `🏁 Processed ${files.length} shots, refreshed embeddings for ${embeddingsUpdated}, pruned ${pruned}`
+  );
+
+  await sqlClient.end();
+}
+
+main().catch(async error => {
+  console.error("❌ Failed to ingest MAFI shots");
+  console.error(error);
+  await sqlClient.end();
+  process.exit(1);
+});
