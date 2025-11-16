@@ -627,7 +627,13 @@ export async function POST(request: Request) {
             functionId: "stream-object-mafi-playlist",
           },
         });
-        const playlistStreamPromise = objectResult.consumeStream();
+        const playlistStreamPromise = (async () => {
+          for await (const part of objectResult.fullStream) {
+            if (part.type === "error") {
+              throw part.error;
+            }
+          }
+        })();
 
         const answer = await raceWithTimeout({
           promise: objectResult.object,
