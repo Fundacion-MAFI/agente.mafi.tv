@@ -35,6 +35,18 @@ import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
 
+const STREAM_WATCHDOG_TIMEOUT_MS = 15_000;
+
+type TelemetryCapableWindow = typeof window & {
+  posthog?: { capture?: (event: string, properties?: Record<string, unknown>) => void };
+  Sentry?: {
+    captureMessage?: (
+      message: string,
+      context?: { extra?: Record<string, unknown> }
+    ) => void;
+  };
+};
+
 export function Chat({
   id,
   initialMessages,
@@ -65,11 +77,14 @@ export function Chat({
 
   const [usage, setUsage] = useState<AppUsage | undefined>(initialLastContext);
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
+  const [showStreamWatchdogAlert, setShowStreamWatchdogAlert] = useState(false);
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
   const [messageMode, setMessageMode] = useState<MessageMode>(
     initialModel?.forcedMode ?? "default"
   );
+  const [lastStreamActivityAt, setLastStreamActivityAt] = useState<number | null>(null);
+  const streamWatchdogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
@@ -128,15 +143,18 @@ export function Chat({
       },
     }),
     onData: (dataPart) => {
+      setLastStreamActivityAt(Date.now());
       setDataStream((ds) => (ds ? [...ds, dataPart] : []));
       if (dataPart.type === "data-usage") {
         setUsage(dataPart.data);
       }
     },
     onFinish: () => {
+      setLastStreamActivityAt(null);
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
     onError: (error) => {
+      setLastStreamActivityAt(null);
       if (error instanceof ChatSDKError) {
         // Check if it's a credit card error
         if (
@@ -158,6 +176,81 @@ export function Chat({
       });
     },
   });
+
+  const clearStreamWatchdogTimeout = useCallback(() => {
+    if (streamWatchdogTimeoutRef.current) {
+      clearTimeout(streamWatchdogTimeoutRef.current);
+      streamWatchdogTimeoutRef.current = null;
+    }
+  }, []);
+
+  const logStreamWatchdogTelemetry = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const clientWindow = window as TelemetryCapableWindow;
+    clientWindow.posthog?.capture?.("chat_stream_watchdog_timeout", {
+      chatId: id,
+      status,
+    });
+
+    clientWindow.Sentry?.captureMessage?.("chat_stream_watchdog_timeout", {
+      extra: { chatId: id, status },
+    });
+
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Chat stream watchdog timeout", { chatId: id, status });
+    }
+  }, [id, status]);
+
+  const handleStreamWatchdogTimeout = useCallback(() => {
+    clearStreamWatchdogTimeout();
+    setLastStreamActivityAt(null);
+    setShowStreamWatchdogAlert(true);
+    logStreamWatchdogTelemetry();
+    stop();
+  }, [clearStreamWatchdogTimeout, logStreamWatchdogTelemetry, stop]);
+
+  useEffect(() => {
+    if (status !== "streaming" || showStreamWatchdogAlert) {
+      clearStreamWatchdogTimeout();
+      return;
+    }
+
+    streamWatchdogTimeoutRef.current = setTimeout(
+      handleStreamWatchdogTimeout,
+      STREAM_WATCHDOG_TIMEOUT_MS
+    );
+
+    return () => {
+      clearStreamWatchdogTimeout();
+    };
+  }, [
+    status,
+    lastStreamActivityAt,
+    showStreamWatchdogAlert,
+    handleStreamWatchdogTimeout,
+    clearStreamWatchdogTimeout,
+  ]);
+
+  const handleRetryLastMessage = useCallback(() => {
+    const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
+
+    if (!lastUserMessage) {
+      toast({ type: "error", description: "There isn't a previous message to retry." });
+      return;
+    }
+
+    setShowStreamWatchdogAlert(false);
+    sendMessage({
+      role: "user",
+      mode: lastUserMessage.mode ?? "default",
+      parts: lastUserMessage.parts,
+    });
+  }, [messages, sendMessage]);
+
+  const hasRetryableUserMessage = messages.some((message) => message.role === "user");
 
   const searchParams = useSearchParams();
   const query = searchParams.get("query");
@@ -282,6 +375,30 @@ export function Chat({
               }}
             >
               Activate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        onOpenChange={setShowStreamWatchdogAlert}
+        open={showStreamWatchdogAlert}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Check the API connection</AlertDialogTitle>
+            <AlertDialogDescription>
+              We stopped receiving data from the AI Gateway. Refresh the page or verify your
+              API connection. You can also retry your last message below.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!hasRetryableUserMessage}
+              onClick={handleRetryLastMessage}
+            >
+              Retry last message
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
