@@ -33,7 +33,6 @@ const createMockModel = (modelId: string): LanguageModel => {
 };
 
 export const chatModel = createMockModel("chat-model");
-export const reasoningModel = createMockModel("chat-model-reasoning");
 export const titleModel = createMockModel("title-model");
 export const artifactModel = createMockModel("artifact-model");
 export const filmAgentModel = createMockModel("film-agent");

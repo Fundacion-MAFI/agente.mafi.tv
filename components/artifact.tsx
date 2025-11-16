@@ -69,7 +69,6 @@ function PureArtifact({
   votes,
   isReadonly,
   selectedVisibilityType,
-  selectedModelId,
   messageMode,
   onModeChange,
 }: {
@@ -87,7 +86,6 @@ function PureArtifact({
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
   isReadonly: boolean;
   selectedVisibilityType: VisibilityType;
-  selectedModelId: string;
   messageMode: MessageMode;
   onModeChange: (mode: MessageMode) => void;
 }) {
@@ -345,7 +343,6 @@ function PureArtifact({
                     messageMode={messageMode}
                     messages={messages}
                     onModeChange={onModeChange}
-                    selectedModelId={selectedModelId}
                     selectedVisibilityType={selectedVisibilityType}
                     sendMessage={sendMessage}
                     setAttachments={setAttachments}

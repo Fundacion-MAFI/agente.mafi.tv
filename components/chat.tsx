@@ -21,7 +21,7 @@ import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import type { Vote } from "@/lib/db/schema";
-import { chatModels } from "@/lib/ai/models";
+import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { STREAM_TROUBLESHOOTING_MESSAGE } from "@/lib/constants";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage, MessageMode } from "@/lib/types";
@@ -73,46 +73,26 @@ export function Chat({
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>("");
-  const initialModel = chatModels.find((model) => model.id === initialChatModel);
+  const initialMode: MessageMode =
+    initialChatModel === "film-agent" ? "archivo" : "default";
 
   const [usage, setUsage] = useState<AppUsage | undefined>(initialLastContext);
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
   const [showStreamWatchdogAlert, setShowStreamWatchdogAlert] = useState(false);
-  const [currentModelId, setCurrentModelId] = useState(initialChatModel);
-  const currentModelIdRef = useRef(currentModelId);
-  const [messageMode, setMessageMode] = useState<MessageMode>(
-    initialModel?.forcedMode ?? "default"
-  );
+  const [messageMode, setMessageMode] = useState<MessageMode>(initialMode);
+  const selectedChatModel =
+    messageMode === "archivo" ? "film-agent" : DEFAULT_CHAT_MODEL;
+  const selectedChatModelRef = useRef(selectedChatModel);
   const [lastStreamActivityAt, setLastStreamActivityAt] = useState<number | null>(null);
   const streamWatchdogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    currentModelIdRef.current = currentModelId;
-  }, [currentModelId]);
+    selectedChatModelRef.current = selectedChatModel;
+  }, [selectedChatModel]);
 
-  const handleModelChange = useCallback((modelId: string) => {
-    setCurrentModelId(modelId);
-    setMessageMode((prevMode) => {
-      const selectedModel = chatModels.find((model) => model.id === modelId);
-
-      if (selectedModel?.forcedMode) {
-        return selectedModel.forcedMode;
-      }
-
-      return prevMode === "archivo" ? "default" : prevMode;
-    });
+  const handleModeChange = useCallback((mode: MessageMode) => {
+    setMessageMode(mode);
   }, []);
-
-  const handleModeChange = useCallback(
-    (mode: MessageMode) => {
-      if (mode === "archivo" && currentModelId !== "film-agent") {
-        setCurrentModelId("film-agent");
-      }
-
-      setMessageMode(mode);
-    },
-    [currentModelId]
-  );
 
   const {
     messages,
@@ -131,15 +111,15 @@ export function Chat({
       api: "/api/chat",
       fetch: fetchWithErrorHandlers,
       prepareSendMessagesRequest(request) {
-        return {
-          body: {
-            id: request.id,
-            message: request.messages.at(-1),
-            selectedChatModel: currentModelIdRef.current,
-            selectedVisibilityType: visibilityType,
-            ...request.body,
-          },
-        };
+            return {
+              body: {
+                id: request.id,
+                message: request.messages.at(-1),
+                selectedChatModel: selectedChatModelRef.current,
+                selectedVisibilityType: visibilityType,
+                ...request.body,
+              },
+            };
       },
     }),
     onData: (dataPart) => {
@@ -326,7 +306,6 @@ export function Chat({
           isReadonly={isReadonly}
           messages={messages}
           regenerate={regenerate}
-          selectedModelId={currentModelId}
           setMessages={setMessages}
           status={status}
           votes={votes}
@@ -339,8 +318,6 @@ export function Chat({
               chatId={id}
               input={input}
               messages={messages}
-              onModelChange={handleModelChange}
-              selectedModelId={currentModelId}
               selectedVisibilityType={visibilityType}
               sendMessage={sendMessage}
               messageMode={messageMode}
@@ -365,7 +342,6 @@ export function Chat({
         messages={messages}
         onModeChange={setMessageMode}
         regenerate={regenerate}
-        selectedModelId={currentModelId}
         selectedVisibilityType={visibilityType}
         sendMessage={sendMessage}
         setAttachments={setAttachments}

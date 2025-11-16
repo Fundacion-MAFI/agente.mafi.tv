@@ -24,7 +24,7 @@
 - [AI SDK](https://ai-sdk.dev/docs/introduction)
   - Unified API for generating text, structured objects, and tool calls with LLMs
   - Hooks for building dynamic chat and generative user interfaces
-  - Supports xAI (default), OpenAI, Fireworks, and other model providers
+  - Supports OpenAI (default), Anthropic, Fireworks, and other model providers
 - [shadcn/ui](https://ui.shadcn.com)
   - Styling with [Tailwind CSS](https://tailwindcss.com)
   - Component primitives from [Radix UI](https://radix-ui.com) for accessibility and flexibility
@@ -36,7 +36,7 @@
 
 ## Model Providers
 
-This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. The default configuration includes [xAI](https://x.ai) models (`grok-2-vision-1212`, `grok-3-mini`) routed through the gateway.
+This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. The default configuration now uses OpenAI models (`gpt-4o`, `gpt-4o-mini`) routed through the gateway.
 
 ### AI Gateway Authentication
 
@@ -48,7 +48,7 @@ With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to 
 
 ### Archivo (`film-agent`) gateway routing
 
-Archivo mode uses the `film-agent` model id defined in [`lib/ai/providers.ts`](lib/ai/providers.ts). That entry can point to a dedicated AI Gateway connection—set `AI_GATEWAY_FILM_AGENT_BASE_URL` and/or `AI_GATEWAY_FILM_AGENT_API_KEY` in your environment to route those requests through a different base URL or API key than the default chat models. When ops teams verify the Archivo gateway connection, they should confirm that those environment variables match the credentials and endpoint of the archival deployment (as documented in [`.env.example`](.env.example)).
+Archivo mode uses the `film-agent` model id defined in [`lib/ai/providers.ts`](lib/ai/providers.ts). By default the handler always talks to the OpenAI models exposed through the Vercel AI Gateway. If you need to route Archivo traffic through a dedicated gateway instance, set **both** `AI_GATEWAY_FILM_AGENT_BASE_URL` and `AI_GATEWAY_FILM_AGENT_API_KEY` (see [`.env.example`](.env.example)). Only Vercel AI Gateway endpoints are supported—legacy Grok/xAI URLs are ignored so the flow never falls back to the deprecated provider.
 
 ## Deploy Your Own
 

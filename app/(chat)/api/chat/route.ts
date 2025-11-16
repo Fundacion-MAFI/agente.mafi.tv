@@ -21,14 +21,13 @@ import { getUsage } from "tokenlens/helpers";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
-import type { ChatModel } from "@/lib/ai/models";
-import { mafiAnswerSchema, type MafiAnswer } from "@/lib/ai/mafi-schema";
 import {
   ArchivoTimeoutError,
-  retrieveRelevantShots,
   type RetrievedShot,
+  retrieveRelevantShots,
 } from "@/lib/ai/mafi-retrieval";
-import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
+import { type MafiAnswer, mafiAnswerSchema } from "@/lib/ai/mafi-schema";
+import type { ChatModel } from "@/lib/ai/models";
 import {
   AGENTE_FILMICO_SYSTEM_PROMPT,
   type RequestHints,
@@ -39,6 +38,7 @@ import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
 import {
   isProductionEnvironment,
   STREAM_TROUBLESHOOTING_MESSAGE,
@@ -66,8 +66,10 @@ import {
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
+export const runtime = "nodejs";
 export const maxDuration = 60;
-const ARCHIVO_REQUEST_TIMEOUT_MS = 15_000;
+const ARCHIVO_RETRIEVAL_TIMEOUT_MS = 12_000;
+const ARCHIVO_PLAYLIST_TIMEOUT_MS = 28_000;
 const ARCHIVO_OFFLINE_MESSAGE =
   "El modo Archivo está temporalmente fuera de línea. Verifica la configuración del AI Gateway y vuelve a intentarlo.";
 
@@ -393,7 +395,8 @@ function logArchivoTimeoutEvent({
         : "unknown";
   const timeoutContext =
     error instanceof ArchivoTimeoutError ? error.context : undefined;
-  const timeoutMs = error instanceof ArchivoTimeoutError ? error.timeoutMs : undefined;
+  const timeoutMs =
+    error instanceof ArchivoTimeoutError ? error.timeoutMs : undefined;
 
   console.error("Archivo mode timeout", {
     chatId,
@@ -410,13 +413,49 @@ function isAbortSignalError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
+function raceWithTimeout<T>({
+  promise,
+  timeoutMs,
+  context,
+  onTimeout,
+}: {
+  promise: Promise<T>;
+  timeoutMs: number;
+  context: string;
+  onTimeout?: (error: ArchivoTimeoutError) => void;
+}): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      const timeoutError = new ArchivoTimeoutError({
+        context,
+        timeoutMs,
+        reason: "timeout",
+      });
+
+      onTimeout?.(timeoutError);
+      reject(timeoutError);
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
 function sendArchivoOfflineResponse(
-  dataStream: UIMessageStreamWriter<ChatMessage>,
+  dataStream: UIMessageStreamWriter<ChatMessage>
 ): void {
   dataStream.merge(
     createMafiPlaylistMessageStream({
       text: ARCHIVO_OFFLINE_MESSAGE,
-    }),
+    })
   );
 }
 
@@ -526,32 +565,18 @@ export async function POST(request: Request) {
       if (!questionText) {
         dataStream.merge(
           createMafiPlaylistMessageStream({
-            text:
-              "Necesito una pregunta o instrucción para buscar en el archivo MAFI. ¿Puedes intentarlo de nuevo?",
+            text: "Necesito una pregunta o instrucción para buscar en el archivo MAFI. ¿Puedes intentarlo de nuevo?",
           })
         );
         return;
       }
 
-      const archivoAbortController = new AbortController();
-      const archivoAbortSignal = archivoAbortController.signal;
-      const archivoTimeoutId = setTimeout(() => {
-        archivoAbortController.abort(
-          new ArchivoTimeoutError({
-            context: "archivo playlist request",
-            timeoutMs: ARCHIVO_REQUEST_TIMEOUT_MS,
-            reason: "timeout",
-          })
-        );
-      }, ARCHIVO_REQUEST_TIMEOUT_MS);
-
-      const cleanupArchivoTimeout = () => {
-        clearTimeout(archivoTimeoutId);
-      };
+      const retrievalAbortController = new AbortController();
+      const retrievalAbortSignal = retrievalAbortController.signal;
 
       const handleArchivoOffline = (
         phase: ArchivoTimeoutPhase,
-        error: unknown,
+        error: unknown
       ) => {
         logArchivoTimeoutEvent({
           chatId: id,
@@ -566,8 +591,8 @@ export async function POST(request: Request) {
 
       try {
         retrievedShots = await retrieveRelevantShots(questionText, {
-          signal: archivoAbortSignal,
-          timeoutMs: ARCHIVO_REQUEST_TIMEOUT_MS,
+          signal: retrievalAbortSignal,
+          timeoutMs: ARCHIVO_RETRIEVAL_TIMEOUT_MS,
         });
       } catch (error) {
         if (error instanceof ArchivoTimeoutError || isAbortSignalError(error)) {
@@ -575,9 +600,13 @@ export async function POST(request: Request) {
           return;
         }
         console.error("Error retrieving MAFI shots", error);
+      } finally {
+        retrievalAbortController.abort();
       }
 
       try {
+        const playlistAbortController = new AbortController();
+        const playlistAbortSignal = playlistAbortController.signal;
         const retrievalContext = serializeShotsForPrompt(
           questionText,
           retrievedShots
@@ -592,17 +621,26 @@ export async function POST(request: Request) {
           system: AGENTE_FILMICO_SYSTEM_PROMPT,
           prompt: retrievalContext,
           schema: mafiAnswerSchema,
-          abortSignal: archivoAbortSignal,
+          abortSignal: playlistAbortSignal,
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: "stream-object-mafi-playlist",
           },
         });
-
-        const [answer, usage] = await Promise.all([
-          objectResult.object,
-          objectResult.usage.catch(() => undefined),
-        ]);
+        const answer = await raceWithTimeout({
+          promise: objectResult.object,
+          timeoutMs: ARCHIVO_PLAYLIST_TIMEOUT_MS,
+          context: "generating Archivo playlist",
+          onTimeout: (timeoutError) =>
+            playlistAbortController.abort(timeoutError),
+        });
+        const usage = await raceWithTimeout({
+          promise: objectResult.usage.catch(() => undefined),
+          timeoutMs: ARCHIVO_PLAYLIST_TIMEOUT_MS,
+          context: "collecting Archivo usage metrics",
+          onTimeout: (timeoutError) =>
+            playlistAbortController.abort(timeoutError),
+        }).catch(() => undefined);
 
         if (usage) {
           try {
@@ -692,12 +730,9 @@ export async function POST(request: Request) {
         console.error("Agente Fílmico flow failed", error);
         dataStream.merge(
           createMafiPlaylistMessageStream({
-            text:
-              "No pude crear una lista del archivo en este momento. Intenta nuevamente más tarde.",
+            text: "No pude crear una lista del archivo en este momento. Intenta nuevamente más tarde.",
           })
         );
-      } finally {
-        cleanupArchivoTimeout();
       }
     };
 
@@ -712,15 +747,12 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
-          experimental_activeTools:
-            selectedChatModel === "chat-model-reasoning"
-              ? []
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                ],
+          experimental_activeTools: [
+            "getWeather",
+            "createDocument",
+            "updateDocument",
+            "requestSuggestions",
+          ],
           experimental_transform: smoothStream({ chunking: "word" }),
           tools: {
             getWeather,
