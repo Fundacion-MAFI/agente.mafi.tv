@@ -42,7 +42,3 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 /playwright/*
-
-# tsx runtime cache
-node-compile-cache/
-tsx-0/

@@ -30,12 +30,6 @@ export type ChatTools = {
   requestSuggestions: requestSuggestionsTool;
 };
 
-export type ChatMode =
-  | "default"
-  | "archivo-libre"
-  | "archivo-curatorial"
-  | "archivo-investigador";
-
 export type CustomUIDataTypes = {
   textDelta: string;
   imageDelta: string;
