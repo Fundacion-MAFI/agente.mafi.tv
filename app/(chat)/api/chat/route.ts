@@ -66,6 +66,7 @@ import {
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
+export const runtime = "nodejs";
 export const maxDuration = 60;
 const ARCHIVO_REQUEST_TIMEOUT_MS = 15_000;
 const ARCHIVO_OFFLINE_MESSAGE =
