@@ -22,7 +22,7 @@ import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
-import type { Attachment, ChatMessage } from "@/lib/types";
+import type { Attachment, ChatMessage, MessageMode } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
 import { Artifact } from "./artifact";
@@ -63,6 +63,7 @@ export function Chat({
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
+  const [messageMode, setMessageMode] = useState<MessageMode>("default");
 
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
@@ -131,6 +132,7 @@ export function Chat({
     if (query && !hasAppendedQuery) {
       sendMessage({
         role: "user" as const,
+        mode: "default",
         parts: [{ type: "text", text: query }],
       });
 
@@ -186,6 +188,8 @@ export function Chat({
               selectedModelId={currentModelId}
               selectedVisibilityType={visibilityType}
               sendMessage={sendMessage}
+              messageMode={messageMode}
+              onModeChange={setMessageMode}
               setAttachments={setAttachments}
               setInput={setInput}
               setMessages={setMessages}

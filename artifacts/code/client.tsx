@@ -252,6 +252,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       onClick: ({ sendMessage }) => {
         sendMessage({
           role: "user",
+          mode: "default",
           parts: [
             {
               type: "text",
@@ -267,6 +268,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       onClick: ({ sendMessage }) => {
         sendMessage({
           role: "user",
+          mode: "default",
           parts: [
             {
               type: "text",

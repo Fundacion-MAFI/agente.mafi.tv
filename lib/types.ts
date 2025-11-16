@@ -45,11 +45,13 @@ export type CustomUIDataTypes = {
   usage: AppUsage;
 };
 
+export type MessageMode = "default" | "archivo";
+
 export type ChatMessage = UIMessage<
   MessageMetadata,
   CustomUIDataTypes,
   ChatTools
->;
+> & { mode?: MessageMode };
 
 export type Attachment = {
   name: string;

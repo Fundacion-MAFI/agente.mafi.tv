@@ -3,7 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
 import { memo } from "react";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, MessageMode } from "@/lib/types";
 import { Suggestion } from "./elements/suggestion";
 import type { VisibilityType } from "./visibility-selector";
 
@@ -11,9 +11,14 @@ type SuggestedActionsProps = {
   chatId: string;
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
   selectedVisibilityType: VisibilityType;
+  messageMode: MessageMode;
 };
 
-function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
+function PureSuggestedActions({
+  chatId,
+  sendMessage,
+  messageMode,
+}: SuggestedActionsProps) {
   const suggestedActions = [
     "What are the advantages of using Next.js?",
     "Write code to demonstrate Dijkstra's algorithm",
@@ -40,6 +45,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
               window.history.replaceState({}, "", `/chat/${chatId}`);
               sendMessage({
                 role: "user",
+                mode: messageMode,
                 parts: [{ type: "text", text: suggestion }],
               });
             }}
@@ -60,6 +66,9 @@ export const SuggestedActions = memo(
       return false;
     }
     if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
+      return false;
+    }
+    if (prevProps.messageMode !== nextProps.messageMode) {
       return false;
     }
 
