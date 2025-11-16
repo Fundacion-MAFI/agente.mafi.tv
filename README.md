@@ -72,6 +72,14 @@ pnpm dev
 
 Your app template should now be running on [localhost:3000](http://localhost:3000).
 
+### Vercel build configuration
+
+When deploying to Vercel make sure migrations run before the `scripts/ingest-mafi-shots.ts` script executes:
+
+1. In **Project Settings → Build & Development Settings**, set the **Build Command** to `pnpm run build` (or explicitly `pnpm db:migrate && pnpm ingest:mafi && next build`). This guarantees the database schema exists before the ingestion script verifies the tables.
+2. Add either `POSTGRES_URL_NON_POOLING` or `POSTGRES_URL` to the **Build** environment scope (in addition to the Runtime scope). `lib/db/migrate.ts` and the ingest script both exit early when they cannot connect to the database during the build.
+3. Redeploy and confirm that the build log for `pnpm ingest:mafi` no longer prints the missing-table warning. That log line only appears when the schema has not been provisioned yet.
+
 ### Updating the MAFI shot archive
 
 The MAFI archive stored in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script, which runs `pnpm db:migrate && pnpm ingest:mafi`. The same migration + ingestion pair now also runs before `next build`, so Vercel deployments always migrate and ingest during the build step without additional configuration. The ingestion script verifies that the `shots` tables exist and will instruct you to run the migration if they are missing. Run the ingestion script manually whenever you add or update markdown files to refresh the database incrementally:

@@ -13,14 +13,19 @@ import { shotEmbeddings, shots } from "../lib/db/schema/shots";
 
 config({ path: ".env.local" });
 
-if (!process.env.POSTGRES_URL) {
-  throw new Error("POSTGRES_URL is not defined");
+const connectionString =
+  process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL;
+
+if (!connectionString) {
+  throw new Error(
+    "POSTGRES_URL or POSTGRES_URL_NON_POOLING must be defined to ingest the archive"
+  );
 }
 
 const dataDirectory = path.join(process.cwd(), "data", "mafi-shots");
 const shouldPrune = process.argv.includes("--prune");
 
-const sqlClient = postgres(process.env.POSTGRES_URL, { max: 1 });
+const sqlClient = postgres(connectionString, { max: 1 });
 const db = drizzle(sqlClient);
 
 type ShotFrontMatter = {
