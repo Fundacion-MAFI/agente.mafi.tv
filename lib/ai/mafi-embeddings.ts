@@ -3,7 +3,7 @@ import { gateway } from "@ai-sdk/gateway";
 
 const DEFAULT_CHUNK_SIZE = 800;
 const DEFAULT_CHUNK_OVERLAP = 200;
-const embeddingModel = gateway.embeddingModel("openai/text-embedding-3-small");
+const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
 
 export type ShotEmbeddingChunk = {
   content: string;

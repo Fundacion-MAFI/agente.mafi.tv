@@ -13,7 +13,7 @@ export type RetrievedShot = Shot & {
 
 const DEFAULT_RESULT_LIMIT = 12;
 const MAX_RESULT_LIMIT = 50;
-const embeddingModel = gateway.embeddingModel("openai/text-embedding-3-small");
+const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
 
 let sqlClient: ReturnType<typeof postgres> | null = null;
 
