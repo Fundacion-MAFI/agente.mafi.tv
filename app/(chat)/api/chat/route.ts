@@ -35,7 +35,10 @@ import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment } from "@/lib/constants";
+import {
+  isProductionEnvironment,
+  STREAM_TROUBLESHOOTING_MESSAGE,
+} from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
@@ -694,7 +697,7 @@ export async function POST(request: Request) {
         }
       },
       onError: () => {
-        return "Oops, an error occurred!";
+        return STREAM_TROUBLESHOOTING_MESSAGE;
       },
     });
 
