@@ -1,10 +1,10 @@
 import type { LanguageModel } from "ai";
 
-const createMockModel = (): LanguageModel => {
+const createMockModel = (modelId: string): LanguageModel => {
   return {
     specificationVersion: "v2",
     provider: "mock",
-    modelId: "mock-model",
+    modelId,
     defaultObjectGenerationMode: "tool",
     supportedUrls: [],
     supportsImageUrls: false,
@@ -32,8 +32,8 @@ const createMockModel = (): LanguageModel => {
   } as unknown as LanguageModel;
 };
 
-export const chatModel = createMockModel();
-export const reasoningModel = createMockModel();
-export const titleModel = createMockModel();
-export const artifactModel = createMockModel();
-export const filmAgentModel = createMockModel();
+export const chatModel = createMockModel("chat-model");
+export const reasoningModel = createMockModel("chat-model-reasoning");
+export const titleModel = createMockModel("title-model");
+export const artifactModel = createMockModel("artifact-model");
+export const filmAgentModel = createMockModel("film-agent");
