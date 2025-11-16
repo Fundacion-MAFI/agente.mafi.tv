@@ -74,7 +74,7 @@ Your app template should now be running on [localhost:3000](http://localhost:300
 
 ### Updating the MAFI shot archive
 
-The MAFI archive stored in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script, which runs `pnpm db:migrate && pnpm ingest:mafi`. The ingestion script verifies that the `shots` tables exist and will instruct you to run the migration if they are missing. Run the ingestion script manually whenever you add or update markdown files to refresh the database incrementally:
+The MAFI archive stored in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script, which runs `pnpm db:migrate && pnpm ingest:mafi`. The same migration + ingestion pair now also runs before `next build`, so Vercel deployments always migrate and ingest during the build step without additional configuration. The ingestion script verifies that the `shots` tables exist and will instruct you to run the migration if they are missing. Run the ingestion script manually whenever you add or update markdown files to refresh the database incrementally:
 
 ```bash
 pnpm ingest:mafi

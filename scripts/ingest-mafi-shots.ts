@@ -43,11 +43,11 @@ async function ensureShotsSchema() {
   const [result] = await sqlClient<{
     shots: string | null;
     shotEmbeddings: string | null;
-  }>`
+  }>(`
     SELECT
       to_regclass('public.shots') AS shots,
       to_regclass('public.shot_embeddings') AS "shotEmbeddings"
-  `;
+  `);
 
   const missingTables = [];
   if (!result?.shots) missingTables.push("shots");
