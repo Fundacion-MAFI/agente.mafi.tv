@@ -40,14 +40,14 @@ async function getMarkdownFiles() {
 }
 
 async function ensureShotsSchema() {
-  const [result] = await sqlClient<{
-    shots: string | null;
-    shotEmbeddings: string | null;
-  }>`
+  const [result] = (await sqlClient`
     SELECT
       to_regclass('public.shots') AS shots,
       to_regclass('public.shot_embeddings') AS "shotEmbeddings"
-  `;
+  `) as {
+    shots: string | null;
+    shotEmbeddings: string | null;
+  }[];
 
   const missingTables = [];
   if (!result?.shots) missingTables.push("shots");
