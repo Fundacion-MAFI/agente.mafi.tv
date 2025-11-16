@@ -13,6 +13,7 @@ export type RetrievedShot = Shot & {
 
 const DEFAULT_RESULT_LIMIT = 12;
 const MAX_RESULT_LIMIT = 50;
+const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
 const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
 
 let sqlClient: ReturnType<typeof postgres> | null = null;
@@ -52,19 +53,118 @@ type RetrievedShotRow = {
   similarity: number;
 };
 
+export class ArchivoTimeoutError extends Error {
+  readonly context: string;
+  readonly timeoutMs: number;
+  readonly reason: "timeout" | "aborted";
+
+  constructor({
+    context,
+    timeoutMs,
+    reason,
+  }: {
+    context: string;
+    timeoutMs: number;
+    reason: "timeout" | "aborted";
+  }) {
+    super(
+      reason === "timeout"
+        ? `Archivo retrieval timed out while ${context} after ${timeoutMs}ms`
+        : `Archivo retrieval aborted while ${context}`,
+    );
+    this.name = "ArchivoTimeoutError";
+    this.context = context;
+    this.timeoutMs = timeoutMs;
+    this.reason = reason;
+  }
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  {
+    context,
+    timeoutMs,
+    signal,
+  }: {
+    context: string;
+    timeoutMs: number;
+    signal?: AbortSignal;
+  },
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      if (signal) {
+        signal.removeEventListener("abort", onAbort);
+      }
+    };
+
+    const onAbort = () => {
+      cleanup();
+      const abortReason =
+        signal?.reason instanceof ArchivoTimeoutError
+          ? signal.reason
+          : new ArchivoTimeoutError({ context, timeoutMs, reason: "aborted" });
+      reject(abortReason);
+    };
+
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+
+    if (signal) {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new ArchivoTimeoutError({ context, timeoutMs, reason: "timeout" }));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+}
+
 export async function retrieveRelevantShots(
   query: string,
-  { limit = DEFAULT_RESULT_LIMIT }: { limit?: number } = {}
+  {
+    limit = DEFAULT_RESULT_LIMIT,
+    signal,
+    timeoutMs = DEFAULT_RETRIEVAL_TIMEOUT_MS,
+  }: { limit?: number; signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<RetrievedShot[]> {
   const normalizedQuery = query.replace(/\s+/g, " ").trim();
   if (!normalizedQuery) {
     return [];
   }
 
-  const { embeddings } = await embedMany({
-    model: embeddingModel,
-    values: [normalizedQuery],
-  });
+  const { embeddings } = await withTimeout(
+    embedMany({
+      model: embeddingModel,
+      values: [normalizedQuery],
+      abortSignal: signal,
+    }),
+    {
+      context: "embedding Archivo query",
+      timeoutMs,
+      signal,
+    },
+  );
 
   const [queryEmbedding] = embeddings ?? [];
   if (!queryEmbedding?.length) {
@@ -74,8 +174,9 @@ export async function retrieveRelevantShots(
   const vectorLiteral = buildVectorLiteral(queryEmbedding);
   const safeLimit = Math.max(1, Math.min(limit, MAX_RESULT_LIMIT));
 
-  const rows = await getSqlClient().unsafe<RetrievedShotRow[]>(
-    `
+  const rows = await withTimeout(
+    getSqlClient().unsafe<RetrievedShotRow[]>(
+      `
     SELECT
       s.id,
       s.slug,
@@ -96,7 +197,13 @@ export async function retrieveRelevantShots(
     JOIN shots s ON s.id = se.shot_id
     ORDER BY se.embedding <=> '${vectorLiteral}'::vector
     LIMIT ${safeLimit}
-  `
+  `,
+    ),
+    {
+      context: "querying Archivo vectors",
+      timeoutMs,
+      signal,
+    },
   );
 
   return rows.map((row) => ({
