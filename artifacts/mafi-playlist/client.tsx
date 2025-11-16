@@ -140,6 +140,15 @@ export const mafiPlaylistArtifact = new Artifact<"mafi-playlist">({
   description: "Curated selections from Archivo MAFI.",
   initialize: async () => undefined,
   onStreamPart: ({ streamPart, setArtifact }) => {
+    if (streamPart.type === "data-clear") {
+      setArtifact((draftArtifact) => ({
+        ...draftArtifact,
+        content: "",
+        status: "streaming",
+        isVisible: false,
+      }));
+    }
+
     if (streamPart.type === "data-textDelta") {
       setArtifact((draftArtifact) => ({
         ...draftArtifact,
@@ -148,6 +157,13 @@ export const mafiPlaylistArtifact = new Artifact<"mafi-playlist">({
         isVisible:
           draftArtifact.isVisible ||
           draftArtifact.content.length + streamPart.data.length > 0,
+      }));
+    }
+
+    if (streamPart.type === "data-finish") {
+      setArtifact((draftArtifact) => ({
+        ...draftArtifact,
+        status: "idle",
       }));
     }
   },
