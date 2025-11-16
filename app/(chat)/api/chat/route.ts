@@ -627,6 +627,14 @@ export async function POST(request: Request) {
             functionId: "stream-object-mafi-playlist",
           },
         });
+        const playlistStreamPromise = (async () => {
+          for await (const part of objectResult.fullStream) {
+            if (part.type === "error") {
+              throw part.error;
+            }
+          }
+        })();
+
         const answer = await raceWithTimeout({
           promise: objectResult.object,
           timeoutMs: ARCHIVO_PLAYLIST_TIMEOUT_MS,
@@ -641,6 +649,8 @@ export async function POST(request: Request) {
           onTimeout: (timeoutError) =>
             playlistAbortController.abort(timeoutError),
         }).catch(() => undefined);
+
+        await playlistStreamPromise;
 
         if (usage) {
           try {
