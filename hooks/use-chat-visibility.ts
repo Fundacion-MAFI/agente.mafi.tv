@@ -34,10 +34,10 @@ export function useChatVisibility({
     }
     const chat = history.chats.find((currentChat) => currentChat.id === chatId);
     if (!chat) {
-      return "private";
+      return initialVisibilityType;
     }
     return chat.visibility;
-  }, [history, chatId, localVisibility]);
+  }, [history, chatId, initialVisibilityType, localVisibility]);
 
   const setVisibilityType = (updatedVisibilityType: VisibilityType) => {
     setLocalVisibility(updatedVisibilityType);
