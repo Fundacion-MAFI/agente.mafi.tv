@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+import type { ChatModel } from "@/lib/ai/models";
+import { chatModels } from "@/lib/ai/models";
+
+const chatModelIds = chatModels.map((model) => model.id) as [
+  ChatModel["id"],
+  ...ChatModel["id"][],
+];
+
 const textPartSchema = z.object({
   type: z.enum(["text"]),
   text: z.string().min(1).max(2000),
@@ -22,7 +30,7 @@ export const postRequestBodySchema = z.object({
     parts: z.array(partSchema),
     mode: z.enum(["default", "archivo"]),
   }),
-  selectedChatModel: z.enum(["chat-model", "chat-model-reasoning"]),
+  selectedChatModel: z.enum(chatModelIds),
   selectedVisibilityType: z.enum(["public", "private"]),
 });
 
