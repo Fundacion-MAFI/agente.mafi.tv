@@ -202,6 +202,7 @@ const ReadingLevelSelector = ({
                 if (currentLevel !== 2 && hasUserSelectedLevel) {
                   sendMessage({
                     role: "user",
+                    mode: "default",
                     parts: [
                       {
                         type: "text",

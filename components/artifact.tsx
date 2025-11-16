@@ -14,11 +14,12 @@ import useSWR, { useSWRConfig } from "swr";
 import { useDebounceCallback, useWindowSize } from "usehooks-ts";
 import { codeArtifact } from "@/artifacts/code/client";
 import { imageArtifact } from "@/artifacts/image/client";
+import { mafiPlaylistArtifact } from "@/artifacts/mafi-playlist/client";
 import { sheetArtifact } from "@/artifacts/sheet/client";
 import { textArtifact } from "@/artifacts/text/client";
 import { useArtifact } from "@/hooks/use-artifact";
 import type { Document, Vote } from "@/lib/db/schema";
-import type { Attachment, ChatMessage } from "@/lib/types";
+import type { Attachment, ChatMessage, MessageMode } from "@/lib/types";
 import { fetcher } from "@/lib/utils";
 import { ArtifactActions } from "./artifact-actions";
 import { ArtifactCloseButton } from "./artifact-close-button";
@@ -34,6 +35,7 @@ export const artifactDefinitions = [
   codeArtifact,
   imageArtifact,
   sheetArtifact,
+  mafiPlaylistArtifact,
 ];
 export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
 
@@ -68,6 +70,8 @@ function PureArtifact({
   isReadonly,
   selectedVisibilityType,
   selectedModelId,
+  messageMode,
+  onModeChange,
 }: {
   chatId: string;
   input: string;
@@ -84,6 +88,8 @@ function PureArtifact({
   isReadonly: boolean;
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
+  messageMode: MessageMode;
+  onModeChange: (mode: MessageMode) => void;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
@@ -336,7 +342,9 @@ function PureArtifact({
                     chatId={chatId}
                     className="bg-background dark:bg-muted"
                     input={input}
+                    messageMode={messageMode}
                     messages={messages}
+                    onModeChange={onModeChange}
                     selectedModelId={selectedModelId}
                     selectedVisibilityType={selectedVisibilityType}
                     sendMessage={sendMessage}
@@ -522,6 +530,9 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
     return false;
   }
   if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
+    return false;
+  }
+  if (prevProps.messageMode !== nextProps.messageMode) {
     return false;
   }
 

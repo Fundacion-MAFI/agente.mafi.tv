@@ -5,7 +5,9 @@ import {
   JsonToSseTransformStream,
   smoothStream,
   stepCountIs,
+  streamObject,
   streamText,
+  type UIMessageStreamWriter,
 } from "ai";
 import { unstable_cache as cache } from "next/cache";
 import { after } from "next/server";
@@ -20,7 +22,13 @@ import { auth, type UserType } from "@/app/(auth)/auth";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import type { ChatModel } from "@/lib/ai/models";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
+import { mafiAnswerSchema, type MafiAnswer } from "@/lib/ai/mafi-schema";
+import { retrieveRelevantShots, type RetrievedShot } from "@/lib/ai/mafi-retrieval";
+import {
+  AGENTE_FILMICO_SYSTEM_PROMPT,
+  type RequestHints,
+  systemPrompt,
+} from "@/lib/ai/prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -34,6 +42,7 @@ import {
   getMessageCountByUserId,
   getMessagesByChatId,
   saveChat,
+  saveDocument,
   saveMessages,
   updateChatLastContextById,
 } from "@/lib/db/queries";
@@ -41,7 +50,11 @@ import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
-import { convertToUIMessages, generateUUID } from "@/lib/utils";
+import {
+  convertToUIMessages,
+  generateUUID,
+  getTextFromMessage,
+} from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
@@ -83,6 +96,168 @@ export function getStreamContext() {
   }
 
   return globalStreamContext;
+}
+
+type PlaylistDocumentReference = {
+  id: string;
+  title: string;
+  kind: "mafi-playlist";
+};
+
+function serializeShotsForPrompt(
+  question: string,
+  shots: RetrievedShot[]
+): string {
+  const payload = {
+    question,
+    shots: shots.map((shot) => ({
+      shotId: shot.id,
+      slug: shot.slug,
+      title: shot.title,
+      author: shot.author,
+      date: shot.date,
+      place: shot.place,
+      geotag: shot.geotag,
+      tags: shot.tags,
+      excerpt: shot.chunkContent,
+      similarity: shot.similarity,
+    })),
+  };
+
+  return JSON.stringify(payload, null, 2);
+}
+
+function buildPlaylistSummary(answer: MafiAnswer): string {
+  const lines: string[] = [answer.generalComment.trim()];
+
+  if (answer.playlist.length === 0) {
+    lines.push(
+      "",
+      "No se encontraron planos del archivo que respondan directamente a esta búsqueda."
+    );
+    return lines.join("\n").trim();
+  }
+
+  lines.push("", "Selección:");
+
+  for (const entry of answer.playlist) {
+    const detail = entry.supportingDetail?.trim()
+      ? ` — ${entry.supportingDetail.trim()}`
+      : "";
+    lines.push(`• ${entry.title}: ${entry.reason}${detail}`);
+  }
+
+  return lines.join("\n").trim();
+}
+
+function truncate(value: string, max: number): string {
+  if (value.length <= max) {
+    return value;
+  }
+  return `${value.slice(0, max - 1)}…`;
+}
+
+function buildPlaylistDocumentTitle(question: string): string {
+  const sanitized = question.trim().replace(/\s+/g, " ");
+  const base = sanitized ? `Agente Fílmico · ${sanitized}` : "Agente Fílmico";
+  return truncate(base, 96);
+}
+
+function buildPlaylistDocumentContent({
+  question,
+  answer,
+  shots,
+}: {
+  question: string;
+  answer: MafiAnswer;
+  shots: RetrievedShot[];
+}): string {
+  const lines: string[] = [];
+  const normalizedQuestion = question.trim() || "Consulta sin descripción";
+  lines.push(`Pregunta: ${normalizedQuestion}`);
+  lines.push("", `Comentario general: ${answer.generalComment.trim()}`);
+
+  if (answer.playlist.length === 0) {
+    lines.push(
+      "",
+      "No se seleccionaron planos porque no hubo coincidencias sólidas en el archivo."
+    );
+    return lines.join("\n");
+  }
+
+  const shotsById = new Map(shots.map((shot) => [shot.id, shot]));
+  const shotsBySlug = new Map(shots.map((shot) => [shot.slug, shot]));
+
+  lines.push("", "Selección curatorial:");
+
+  answer.playlist.forEach((entry, index) => {
+    const shotMatch = entry.shotId
+      ? shotsById.get(entry.shotId)
+      : shotsBySlug.get(entry.slug);
+
+    const author = shotMatch?.author?.trim() || "Autoría desconocida";
+    const dateFragment = shotMatch?.date ? `, ${shotMatch.date}` : "";
+    lines.push(`${index + 1}. ${entry.title} (${author}${dateFragment})`);
+    lines.push(`   slug: ${entry.slug}`);
+    if (shotMatch?.place) {
+      lines.push(`   Lugar: ${shotMatch.place}`);
+    }
+    if (shotMatch?.tags?.length) {
+      lines.push(`   Etiquetas: ${shotMatch.tags.join(", ")}`);
+    }
+    lines.push(`   Motivo: ${entry.reason}`);
+    if (entry.supportingDetail) {
+      lines.push(`   Detalle: ${entry.supportingDetail}`);
+    }
+    if (shotMatch?.chunkContent) {
+      lines.push(`   Fragmento: ${shotMatch.chunkContent}`);
+    }
+    lines.push(" ");
+  });
+
+  return lines.join("\n").trimEnd();
+}
+
+function createMafiPlaylistMessageStream({
+  text,
+  document,
+}: {
+  text: string;
+  document?: PlaylistDocumentReference;
+}) {
+  const safeText = text.trim().length
+    ? text.trim()
+    : "No pude generar una lista en este momento.";
+  const textId = generateUUID();
+  const toolCallId = document ? generateUUID() : undefined;
+
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue({ type: "start" });
+      controller.enqueue({ type: "start-step" });
+      controller.enqueue({ type: "text-start", id: textId });
+      controller.enqueue({ type: "text-delta", id: textId, delta: safeText });
+      controller.enqueue({ type: "text-end", id: textId });
+
+      if (document && toolCallId) {
+        controller.enqueue({
+          type: "tool-input-available",
+          toolCallId,
+          toolName: "createDocument",
+          input: { title: document.title, kind: document.kind },
+        });
+        controller.enqueue({
+          type: "tool-output-available",
+          toolCallId,
+          output: document,
+        });
+      }
+
+      controller.enqueue({ type: "finish-step" });
+      controller.enqueue({ type: "finish" });
+      controller.close();
+    },
+  });
 }
 
 export async function POST(request: Request) {
@@ -177,8 +352,151 @@ export async function POST(request: Request) {
 
     let finalMergedUsage: AppUsage | undefined;
 
+    const isArchivoMode = message.mode === "archivo";
+
+    const handleArchivoRequest = async (
+      dataStream: UIMessageStreamWriter<ChatMessage>
+    ) => {
+      const questionText = getTextFromMessage(message).trim();
+
+      if (!questionText) {
+        dataStream.merge(
+          createMafiPlaylistMessageStream({
+            text:
+              "Necesito una pregunta o instrucción para buscar en el archivo MAFI. ¿Puedes intentarlo de nuevo?",
+          })
+        );
+        return;
+      }
+
+      let retrievedShots: RetrievedShot[] = [];
+
+      try {
+        retrievedShots = await retrieveRelevantShots(questionText);
+      } catch (error) {
+        console.error("Error retrieving MAFI shots", error);
+      }
+
+      try {
+        const retrievalContext = serializeShotsForPrompt(
+          questionText,
+          retrievedShots
+        );
+
+        const archiveModel = myProvider.languageModel("chat-model");
+        const objectResult = streamObject({
+          model: archiveModel,
+          system: AGENTE_FILMICO_SYSTEM_PROMPT,
+          prompt: retrievalContext,
+          schema: mafiAnswerSchema,
+          experimental_telemetry: {
+            isEnabled: isProductionEnvironment,
+            functionId: "stream-object-mafi-playlist",
+          },
+        });
+
+        const [answer, usage] = await Promise.all([
+          objectResult.object,
+          objectResult.usage.catch(() => undefined),
+        ]);
+
+        if (usage) {
+          try {
+            const providers = await getTokenlensCatalog();
+            const modelId = archiveModel.modelId;
+
+            if (modelId && providers) {
+              const summary = getUsage({ modelId, usage, providers });
+              finalMergedUsage = {
+                ...usage,
+                ...summary,
+                modelId,
+              } as AppUsage;
+            } else {
+              finalMergedUsage = usage as AppUsage;
+            }
+          } catch (error) {
+            console.warn("TokenLens enrichment failed", error);
+            finalMergedUsage = usage as AppUsage;
+          }
+
+          if (finalMergedUsage) {
+            dataStream.write({
+              type: "data-usage",
+              data: finalMergedUsage,
+            });
+          }
+        }
+
+        const documentId = generateUUID();
+        const documentTitle = buildPlaylistDocumentTitle(questionText);
+        const documentContent = buildPlaylistDocumentContent({
+          question: questionText,
+          answer,
+          shots: retrievedShots,
+        });
+
+        await saveDocument({
+          id: documentId,
+          title: documentTitle,
+          kind: "mafi-playlist",
+          content: documentContent,
+          userId: session.user.id,
+        });
+
+        const playlistText = buildPlaylistSummary(answer);
+        const documentReference: PlaylistDocumentReference = {
+          id: documentId,
+          title: documentTitle,
+          kind: "mafi-playlist",
+        };
+
+        dataStream.write({
+          type: "data-kind",
+          data: "mafi-playlist",
+          transient: true,
+        });
+        dataStream.write({
+          type: "data-id",
+          data: documentId,
+          transient: true,
+        });
+        dataStream.write({
+          type: "data-title",
+          data: documentTitle,
+          transient: true,
+        });
+        dataStream.write({ type: "data-clear", data: null, transient: true });
+        dataStream.write({
+          type: "data-textDelta",
+          data: `${documentContent}\n`,
+          transient: true,
+        });
+        dataStream.write({ type: "data-finish", data: null, transient: true });
+
+        dataStream.merge(
+          createMafiPlaylistMessageStream({
+            text: playlistText,
+            document: documentReference,
+          })
+        );
+      } catch (error) {
+        console.error("Agente Fílmico flow failed", error);
+        dataStream.merge(
+          createMafiPlaylistMessageStream({
+            text:
+              "No pude crear una lista del archivo en este momento. Intenta nuevamente más tarde.",
+          })
+        );
+      }
+    };
+
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
+        if (isArchivoMode) {
+          return handleArchivoRequest(dataStream);
+        }
+
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel, requestHints }),

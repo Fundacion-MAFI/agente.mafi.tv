@@ -129,6 +129,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
+            mode: "default",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -183,6 +184,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
+            mode: "default",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -233,6 +235,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
+            mode: "default",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -276,6 +279,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
+            mode: "default",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -323,6 +327,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
+            mode: "default",
             content: "Help me write an essay about Silicon Valley",
             parts: [
               {

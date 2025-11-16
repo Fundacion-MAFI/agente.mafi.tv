@@ -7,6 +7,7 @@ export const TEST_PROMPTS = {
       createdAt: new Date().toISOString(),
       role: "user",
       content: "Why is the sky blue?",
+      mode: "default",
       parts: [{ type: "text", text: "Why is the sky blue?" }],
     },
     OUTPUT_STREAM: [
@@ -28,6 +29,7 @@ export const TEST_PROMPTS = {
       createdAt: new Date().toISOString(),
       role: "user",
       content: "Why is grass green?",
+      mode: "default",
       parts: [{ type: "text", text: "Why is grass green?" }],
     },
     OUTPUT_STREAM: [
