@@ -17,6 +17,7 @@ export const myProvider = isTestEnvironment
       return customProvider({
         languageModels: {
           "chat-model": chatModel,
+          "film-agent": chatModel,
           "chat-model-reasoning": reasoningModel,
           "title-model": titleModel,
           "artifact-model": artifactModel,
@@ -26,6 +27,7 @@ export const myProvider = isTestEnvironment
   : customProvider({
       languageModels: {
         "chat-model": gateway.languageModel("xai/grok-2-vision-1212"),
+        "film-agent": gateway.languageModel("xai/grok-2-vision-1212"),
         "chat-model-reasoning": wrapLanguageModel({
           model: gateway.languageModel("xai/grok-3-mini"),
           middleware: extractReasoningMiddleware({ tagName: "think" }),

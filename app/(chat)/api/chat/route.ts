@@ -24,6 +24,7 @@ import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import type { ChatModel } from "@/lib/ai/models";
 import { mafiAnswerSchema, type MafiAnswer } from "@/lib/ai/mafi-schema";
 import { retrieveRelevantShots, type RetrievedShot } from "@/lib/ai/mafi-retrieval";
+import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
 import {
   AGENTE_FILMICO_SYSTEM_PROMPT,
   type RequestHints,
@@ -163,6 +164,111 @@ function buildPlaylistDocumentTitle(question: string): string {
   return truncate(base, 96);
 }
 
+function parseFlexibleTime(value: string | null | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^\d+$/.test(normalized)) {
+    return Number(normalized);
+  }
+
+  if (/^\d+s$/.test(normalized)) {
+    return Number(normalized.slice(0, -1));
+  }
+
+  const hmsMatch = normalized.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+
+  if (hmsMatch && (hmsMatch[1] || hmsMatch[2] || hmsMatch[3])) {
+    const hours = Number(hmsMatch[1] ?? 0);
+    const minutes = Number(hmsMatch[2] ?? 0);
+    const seconds = Number(hmsMatch[3] ?? 0);
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
+  if (normalized.includes(":")) {
+    const parts = normalized.split(":").map((part) => Number(part));
+
+    if (parts.every((part) => Number.isFinite(part))) {
+      return parts.reduce((total, part) => total * 60 + part);
+    }
+  }
+
+  return null;
+}
+
+function formatSeconds(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  const parts = [hrs, mins, secs]
+    .filter((value, index) => value > 0 || index > 0)
+    .map((value) => value.toString().padStart(2, "0"));
+
+  if (parts.length === 0) {
+    return "00:00";
+  }
+
+  return parts.join(":");
+}
+
+function extractVimeoMetadata(url: string | null | undefined): {
+  videoId?: string;
+  startTimeSeconds?: number;
+  startTimeLabel?: string;
+} {
+  if (!url) {
+    return {};
+  }
+
+  try {
+    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
+    const parsedUrl = new URL(normalizedUrl);
+    const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
+    const videoId = pathSegments.at(-1) ?? undefined;
+
+    const searchStart =
+      parsedUrl.searchParams.get("t") ?? parsedUrl.searchParams.get("start");
+
+    let hashStart: string | null = null;
+
+    if (parsedUrl.hash) {
+      const hash = parsedUrl.hash.replace(/^#/, "");
+
+      if (hash.includes("=")) {
+        const params = new URLSearchParams(hash);
+        hashStart = params.get("t") ?? params.get("start");
+      } else if (hash.startsWith("t=")) {
+        hashStart = hash.slice(2);
+      } else if (hash.length > 0) {
+        hashStart = hash;
+      }
+    }
+
+    const startSeconds = parseFlexibleTime(searchStart ?? hashStart ?? null);
+
+    if (typeof startSeconds === "number") {
+      return {
+        videoId,
+        startTimeSeconds: startSeconds,
+        startTimeLabel: formatSeconds(startSeconds),
+      };
+    }
+
+    return { videoId };
+  } catch (_error) {
+    return {};
+  }
+}
+
 function buildPlaylistDocumentContent({
   question,
   answer,
@@ -172,50 +278,46 @@ function buildPlaylistDocumentContent({
   answer: MafiAnswer;
   shots: RetrievedShot[];
 }): string {
-  const lines: string[] = [];
   const normalizedQuestion = question.trim() || "Consulta sin descripción";
-  lines.push(`Pregunta: ${normalizedQuestion}`);
-  lines.push("", `Comentario general: ${answer.generalComment.trim()}`);
+  const payload: MafiPlaylistDocumentContent = {
+    question: normalizedQuestion,
+    generalComment: answer.generalComment.trim(),
+    playlist: [],
+  };
 
   if (answer.playlist.length === 0) {
-    lines.push(
-      "",
-      "No se seleccionaron planos porque no hubo coincidencias sólidas en el archivo."
-    );
-    return lines.join("\n");
+    return JSON.stringify(payload, null, 2);
   }
 
   const shotsById = new Map(shots.map((shot) => [shot.id, shot]));
   const shotsBySlug = new Map(shots.map((shot) => [shot.slug, shot]));
 
-  lines.push("", "Selección curatorial:");
-
-  answer.playlist.forEach((entry, index) => {
+  payload.playlist = answer.playlist.map((entry, index) => {
     const shotMatch = entry.shotId
       ? shotsById.get(entry.shotId)
       : shotsBySlug.get(entry.slug);
+    const vimeoMetadata = extractVimeoMetadata(shotMatch?.vimeoUrl ?? null);
 
-    const author = shotMatch?.author?.trim() || "Autoría desconocida";
-    const dateFragment = shotMatch?.date ? `, ${shotMatch.date}` : "";
-    lines.push(`${index + 1}. ${entry.title} (${author}${dateFragment})`);
-    lines.push(`   slug: ${entry.slug}`);
-    if (shotMatch?.place) {
-      lines.push(`   Lugar: ${shotMatch.place}`);
-    }
-    if (shotMatch?.tags?.length) {
-      lines.push(`   Etiquetas: ${shotMatch.tags.join(", ")}`);
-    }
-    lines.push(`   Motivo: ${entry.reason}`);
-    if (entry.supportingDetail) {
-      lines.push(`   Detalle: ${entry.supportingDetail}`);
-    }
-    if (shotMatch?.chunkContent) {
-      lines.push(`   Fragmento: ${shotMatch.chunkContent}`);
-    }
-    lines.push(" ");
+    return {
+      order: index + 1,
+      title: entry.title,
+      slug: entry.slug,
+      reason: entry.reason,
+      supportingDetail: entry.supportingDetail,
+      shotId: entry.shotId,
+      author: shotMatch?.author ?? null,
+      date: shotMatch?.date ?? null,
+      place: shotMatch?.place ?? null,
+      tags: shotMatch?.tags ?? [],
+      excerpt: shotMatch?.chunkContent ?? null,
+      vimeoUrl: shotMatch?.vimeoUrl ?? null,
+      vimeoId: vimeoMetadata.videoId ?? null,
+      startTimeSeconds: vimeoMetadata.startTimeSeconds ?? null,
+      startTimeLabel: vimeoMetadata.startTimeLabel ?? null,
+    };
   });
 
-  return lines.join("\n").trimEnd();
+  return JSON.stringify(payload, null, 2);
 }
 
 function createMafiPlaylistMessageStream({
