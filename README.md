@@ -48,7 +48,7 @@ With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to 
 
 ### Archivo (`film-agent`) gateway routing
 
-Archivo mode uses the `film-agent` model id defined in [`lib/ai/providers.ts`](lib/ai/providers.ts). That entry can point to a dedicated AI Gateway connection—set `AI_GATEWAY_FILM_AGENT_BASE_URL` and/or `AI_GATEWAY_FILM_AGENT_API_KEY` in your environment to route those requests through a different base URL or API key than the default chat models. When verifying the Archivo gateway, ensure those values match the credentials and endpoint of the archival deployment.
+Archivo mode uses the `film-agent` model id defined in [`lib/ai/providers.ts`](lib/ai/providers.ts). That entry can point to a dedicated AI Gateway connection—set `AI_GATEWAY_FILM_AGENT_BASE_URL` and/or `AI_GATEWAY_FILM_AGENT_API_KEY` in your environment to route those requests through a different base URL or API key than the default chat models. When ops teams verify the Archivo gateway connection, they should confirm that those environment variables match the credentials and endpoint of the archival deployment (as documented in [`.env.example`](.env.example)).
 
 ## Deploy Your Own
 
