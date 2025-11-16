@@ -1,8 +1,9 @@
 import { embedMany } from "ai";
+import { gateway } from "@ai-sdk/gateway";
 
 const DEFAULT_CHUNK_SIZE = 800;
 const DEFAULT_CHUNK_OVERLAP = 200;
-const MODEL = "text-embedding-3-small";
+const embeddingModel = gateway.embeddingModel("openai/text-embedding-3-small");
 
 export type ShotEmbeddingChunk = {
   content: string;
@@ -68,7 +69,7 @@ export async function generateShotEmbeddings(
   }
 
   const { embeddings } = await embedMany({
-    model: MODEL,
+    model: embeddingModel,
     values: chunks,
   });
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { embedMany } from "ai";
+import { gateway } from "@ai-sdk/gateway";
 import postgres from "postgres";
 
 import type { Shot } from "@/lib/db/schema";
@@ -12,7 +13,7 @@ export type RetrievedShot = Shot & {
 
 const DEFAULT_RESULT_LIMIT = 12;
 const MAX_RESULT_LIMIT = 50;
-const EMBEDDING_MODEL = "text-embedding-3-small";
+const embeddingModel = gateway.embeddingModel("openai/text-embedding-3-small");
 
 let sqlClient: ReturnType<typeof postgres> | null = null;
 
@@ -61,7 +62,7 @@ export async function retrieveRelevantShots(
   }
 
   const { embeddings } = await embedMany({
-    model: EMBEDDING_MODEL,
+    model: embeddingModel,
     values: [normalizedQuery],
   });
 
