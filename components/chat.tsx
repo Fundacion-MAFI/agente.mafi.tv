@@ -22,6 +22,7 @@ import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import type { Vote } from "@/lib/db/schema";
 import { chatModels } from "@/lib/ai/models";
+import { STREAM_TROUBLESHOOTING_MESSAGE } from "@/lib/constants";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage, MessageMode } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
@@ -148,7 +149,13 @@ export function Chat({
             description: error.message,
           });
         }
+        return;
       }
+
+      toast({
+        type: "error",
+        description: STREAM_TROUBLESHOOTING_MESSAGE,
+      });
     },
   });
 
