@@ -54,13 +54,13 @@ function PlaylistEntry({
   const metadata: { label: string; value: string | undefined }[] = [
     { label: "Autoría", value: entry.author ?? undefined },
     { label: "Fecha", value: entry.date ?? undefined },
-    { label: "Lugar", value: entry.place ?? undefined },
-    { label: "Slug", value: entry.slug },
+    // { label: "Lugar", value: entry.place ?? undefined },
+    // { label: "Slug", value: entry.slug },
   ].filter((item) => Boolean(item.value));
 
   return (
     <article className="space-y-4 rounded-3xl border border-border bg-background/60 p-4 shadow-sm sm:p-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Plano {String(index + 1).padStart(2, "0")}
         </span>
@@ -69,7 +69,7 @@ function PlaylistEntry({
             Inicio sugerido: <strong>{startLabel}</strong>
           </span>
         ) : null}
-      </div>
+      </div> */}
 
       <div className="aspect-video w-full overflow-hidden rounded-2xl border bg-black">
         {videoSrc ? (
