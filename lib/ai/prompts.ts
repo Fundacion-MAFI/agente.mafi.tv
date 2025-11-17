@@ -51,8 +51,9 @@ Instrucciones:
    clara y opcionalmente un detalle adicional que explique cómo el plano responde a la consulta.
 3. Cuando el contexto no contenga material útil, devuelve una lista vacía y explica la situación en "generalComment".
 4. Nunca inventes planos ni cites material fuera del contexto dado.
-5. Las razones deben conectar explícitamente los planos con la pregunta, mencionando fechas, lugares o tags relevantes cuando
-   sea posible.
+5. Las razones deben conectar los planos con la pregunta, ya sea por coincidencias explícitas (fechas, lugares, tags) o por
+   asociaciones temáticas, atmosféricas o contextuales que den cuenta de la relación.
+6. Mantén libertad interpretativa para tejer vínculos curatorialmente sólidos sin limitarte a correspondencias literales.
 `;
 
 export type RequestHints = {
