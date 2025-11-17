@@ -20,11 +20,10 @@ function PureSuggestedActions({
   messageMode,
 }: SuggestedActionsProps) {
   const suggestedActions = [
-    "Encuentra planos de manifestaciones en Santiago alrededor de 2019.",
-    "Arma una playlist con tomas nocturnas de ciudades latinoamericanas.",
-    "Muéstrame planos de archivo sobre pueblos originarios en Chile.",
-    "Busca secuencias de naturaleza del sur de Chile entre 2015 y 2018.",
-    "Sugiere planos de archivo con tomas aéreas de centros urbanos.",
+    "Muéstrame planos de protestas.",
+    "Arma una playlist sobre trabajadores.",
+    "Muéstrame sobre la identidad nacional.",
+    "¿Qué planos grabó Antonio Luco?",
   ];
 
   return (

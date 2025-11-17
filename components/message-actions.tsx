@@ -36,12 +36,12 @@ export function PureMessageActions({
 
   const handleCopy = async () => {
     if (!textFromParts) {
-      toast.error("There's no text to copy!");
+      toast.error("¡No hay texto para copiar!");
       return;
     }
 
     await copyToClipboard(textFromParts);
-    toast.success("Copied to clipboard!");
+    toast.success("¡Copiado al portapapeles!");
   };
 
   // User messages get edit (on hover) and copy actions
@@ -54,12 +54,12 @@ export function PureMessageActions({
               className="-left-10 absolute top-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/message:opacity-100"
               data-testid="message-edit-button"
               onClick={() => setMode("edit")}
-              tooltip="Edit"
+              tooltip="Editar"
             >
               <PencilEditIcon />
             </Action>
           )}
-          <Action onClick={handleCopy} tooltip="Copy">
+          <Action onClick={handleCopy} tooltip="Copiar">
             <CopyIcon />
           </Action>
         </div>
@@ -69,7 +69,7 @@ export function PureMessageActions({
 
   return (
     <Actions className="-ml-0.5">
-      <Action onClick={handleCopy} tooltip="Copy">
+      <Action onClick={handleCopy} tooltip="Copiar">
         <CopyIcon />
       </Action>
 
@@ -87,7 +87,7 @@ export function PureMessageActions({
           });
 
           toast.promise(upvote, {
-            loading: "Upvoting Response...",
+            loading: "Votando respuesta...",
             success: () => {
               mutate<Vote[]>(
                 `/api/vote?chatId=${chatId}`,
@@ -112,12 +112,12 @@ export function PureMessageActions({
                 { revalidate: false }
               );
 
-              return "Upvoted Response!";
+              return "Voto emitido!";
             },
-            error: "Failed to upvote response.",
+            error: "Error al emitir el voto.",
           });
         }}
-        tooltip="Upvote Response"
+        tooltip="Buena Respuesta"
       >
         <ThumbUpIcon />
       </Action>
@@ -161,12 +161,12 @@ export function PureMessageActions({
                 { revalidate: false }
               );
 
-              return "Downvoted Response!";
+              return "Voto emitido!";
             },
-            error: "Failed to downvote response.",
+            error: "Error al emitir el voto.",
           });
         }}
-        tooltip="Downvote Response"
+        tooltip="Mala Respuesta"
       >
         <ThumbDownIcon />
       </Action>

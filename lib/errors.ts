@@ -66,7 +66,7 @@ export class ChatSDKError extends Error {
       });
 
       return Response.json(
-        { code: "", message: "Something went wrong. Please try again later." },
+        { code: "", message: "Algo salió mal. Por favor, inténtalo de nuevo más tarde." },
         { status: statusCode }
       );
     }
@@ -77,43 +77,41 @@ export class ChatSDKError extends Error {
 
 export function getMessageByErrorCode(errorCode: ErrorCode): string {
   if (errorCode.includes("database")) {
-    return "An error occurred while executing a database query.";
+    return "Ocurrió un error al ejecutar una consulta en la base de datos.";
   }
 
   switch (errorCode) {
     case "bad_request:api":
-      return "The request couldn't be processed. Please check your input and try again.";
+      return "La solicitud al servicio API no es válida. Por favor, comprueba tu entrada e inténtalo de nuevo.";
 
     case "bad_request:activate_gateway":
-      return "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card to add a card and unlock your free credits.";
+      return "La solicitud para activar el gateway. Por favor, comprueba tu entrada e inténtalo de nuevo.";
 
     case "unauthorized:auth":
-      return "You need to sign in before continuing.";
+      return "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.";
     case "forbidden:auth":
-      return "Your account does not have access to this feature.";
+      return "Tu cuenta no tiene acceso a esta función.";
 
     case "rate_limit:chat":
-      return "You have exceeded your maximum number of messages for the day. Please try again later.";
+      return "Has superado el número máximo de mensajes para el día. Por favor, inténtalo de nuevo más tarde.";
     case "not_found:chat":
-      return "The requested chat was not found. Please check the chat ID and try again.";
+      return "El chat solicitado no fue encontrado. Por favor, verifica el ID del chat e inténtalo de nuevo.";
     case "forbidden:chat":
-      return "This chat belongs to another user. Please check the chat ID and try again.";
+      return "Este chat pertenece a otro usuario. Por favor, verifica el ID del chat e inténtalo de nuevo.";
     case "unauthorized:chat":
-      return "You need to sign in to view this chat. Please sign in and try again.";
+      return "Necesitas iniciar sesión para ver este chat. Por favor, inicia sesión e inténtalo de nuevo.";
     case "offline:chat":
-      return "We're having trouble sending your message. Please check your internet connection and try again.";
-
+      return "Estamos teniendo problemas para enviar tu mensaje. Por favor, verifica tu conexión a internet e inténtalo de nuevo.";
     case "not_found:document":
-      return "The requested document was not found. Please check the document ID and try again.";
+      return "El documento solicitado no fue encontrado. Por favor, verifica el ID del documento e inténtalo de nuevo.";
     case "forbidden:document":
-      return "This document belongs to another user. Please check the document ID and try again.";
+      return "Este documento pertenece a otro usuario. Por favor, verifica el ID del documento e inténtalo de nuevo.";
     case "unauthorized:document":
-      return "You need to sign in to view this document. Please sign in and try again.";
+      return "Necesitas iniciar sesión para ver este documento. Por favor, inicia sesión e inténtalo de nuevo.";
     case "bad_request:document":
-      return "The request to create or update the document was invalid. Please check your input and try again.";
-
+      return "La solicitud para crear o actualizar el documento no es válida. Por favor, comprueba tu entrada e inténtalo de nuevo.";
     default:
-      return "Something went wrong. Please try again later.";
+      return "Algo salió mal. Por favor, inténtalo de nuevo más tarde.";
   }
 }
 
