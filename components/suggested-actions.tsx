@@ -20,7 +20,7 @@ function PureSuggestedActions({
   messageMode,
 }: SuggestedActionsProps) {
   const suggestedActions = [
-    "Muéstrame planos sobre sobre protestas.",
+    "Muéstrame planos sobre protestas.",
     "Planos grabados cerca de mi ubicación.",
     "Muéstrame que retraten el mar.",
     "Quiero ver sobre el trabajo",

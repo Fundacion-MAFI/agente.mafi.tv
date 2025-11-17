@@ -125,11 +125,12 @@ function PlaylistEntry({
           </div>
         ) : null}
 
-        {entry.excerpt ? (
+        {/* {entry.excerpt ? (
           <blockquote className="rounded-2xl bg-muted/40 p-3 text-sm text-muted-foreground">
             “{entry.excerpt}”
           </blockquote>
-        ) : null}
+        ) : null} */}
+        
       </div>
     </article>
   );
