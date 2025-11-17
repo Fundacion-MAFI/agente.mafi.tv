@@ -20,10 +20,10 @@ function PureSuggestedActions({
   messageMode,
 }: SuggestedActionsProps) {
   const suggestedActions = [
-    "Muéstrame planos de protestas.",
-    "Arma una playlist sobre trabajadores.",
+    "Muéstrame planos sobre eventos culturales.",
+    "Quiero ver imagenes de la Moneda.",
     "Muéstrame sobre la identidad nacional.",
-    "¿Qué planos grabó Antonio Luco?",
+    "¿Qué planos grabó Ignacio Rojas?",
   ];
 
   return (
