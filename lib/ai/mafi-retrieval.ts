@@ -11,7 +11,8 @@ export type RetrievedShot = Shot & {
   similarity: number;
 };
 
-const DEFAULT_RESULT_LIMIT = 12;
+// Default top-k tuned to surface loosely related shots even when close matches are scarce.
+const DEFAULT_RETRIEVAL_K = 24;
 const MAX_RESULT_LIMIT = 50;
 const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
 const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
@@ -143,7 +144,7 @@ function withTimeout<T>(
 export async function retrieveRelevantShots(
   query: string,
   {
-    limit = DEFAULT_RESULT_LIMIT,
+    limit = DEFAULT_RETRIEVAL_K,
     signal,
     timeoutMs = DEFAULT_RETRIEVAL_TIMEOUT_MS,
   }: { limit?: number; signal?: AbortSignal; timeoutMs?: number } = {},
