@@ -151,14 +151,14 @@ function buildPlaylistSummary(answer: MafiAnswer): string {
     return lines.join("\n").trim();
   }
 
-  lines.push("", "Selección:");
+  // lines.push("", "Selección:");
 
-  for (const entry of answer.playlist) {
-    const detail = entry.supportingDetail?.trim()
-      ? ` — ${entry.supportingDetail.trim()}`
-      : "";
-    lines.push(`• ${entry.title}: ${entry.reason}${detail}`);
-  }
+  // for (const entry of answer.playlist) {
+  //   const detail = entry.supportingDetail?.trim()
+  //     ? ` — ${entry.supportingDetail.trim()}`
+  //     : "";
+  //   lines.push(`• ${entry.title}: ${entry.reason}${detail}`);
+  // }
 
   return lines.join("\n").trim();
 }
