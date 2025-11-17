@@ -11,8 +11,8 @@ export type RetrievedShot = Shot & {
   similarity: number;
 };
 
-const DEFAULT_RETRIEVAL_K = 20;
-const MAX_RESULT_LIMIT = 10;
+const DEFAULT_RETRIEVAL_K = 24;
+const MAX_RESULT_LIMIT = 50;
 const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
 const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
 
