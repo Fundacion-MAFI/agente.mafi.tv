@@ -1,20 +1,4 @@
-<a href="https://chat.vercel.ai/">
-  <img alt="Next.js 14 and App Router-ready AI chatbot." src="app/(chat)/opengraph-image.png">
-  <h1 align="center">Chat SDK</h1>
-</a>
-
-<p align="center">
-    Chat SDK is a free, open-source template built with Next.js and the AI SDK that helps you quickly build powerful chatbot applications.
-</p>
-
-<p align="center">
-  <a href="https://chat-sdk.dev"><strong>Read Docs</strong></a> ·
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#model-providers"><strong>Model Providers</strong></a> ·
-  <a href="#deploy-your-own"><strong>Deploy Your Own</strong></a> ·
-  <a href="#running-locally"><strong>Running locally</strong></a>
-</p>
-<br/>
+<h1 align="center">Film Agent</h1>
 
 ## Features
 
@@ -37,63 +21,3 @@
 ## Model Providers
 
 This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. The default configuration now uses OpenAI models (`gpt-4o`, `gpt-4o-mini`) routed through the gateway.
-
-### AI Gateway Authentication
-
-**For Vercel deployments**: Authentication is handled automatically via OIDC tokens.
-
-**For non-Vercel deployments**: You need to provide an AI Gateway API key by setting the `AI_GATEWAY_API_KEY` environment variable in your `.env.local` file.
-
-With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to direct LLM providers like [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://ai-sdk.dev/providers/ai-sdk-providers) with just a few lines of code.
-
-### Archivo (`film-agent`) gateway routing
-
-Archivo mode uses the `film-agent` model id defined in [`lib/ai/providers.ts`](lib/ai/providers.ts). By default the handler always talks to the OpenAI models exposed through the Vercel AI Gateway. If you need to route Archivo traffic through a dedicated gateway instance, set **both** `AI_GATEWAY_FILM_AGENT_BASE_URL` and `AI_GATEWAY_FILM_AGENT_API_KEY` (see [`.env.example`](.env.example)). Only Vercel AI Gateway endpoints are supported—legacy Grok/xAI URLs are ignored so the flow never falls back to the deprecated provider.
-
-## Deploy Your Own
-
-You can deploy your own version of the Next.js AI Chatbot to Vercel with one click:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/templates/next.js/nextjs-ai-chatbot)
-
-## Running locally
-
-You will need to use the environment variables [defined in `.env.example`](.env.example) to run Next.js AI Chatbot. It's recommended you use [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables) for this, but a `.env` file is all that is necessary.
-
-> Note: You should not commit your `.env` file or it will expose secrets that will allow others to control access to your various AI and authentication provider accounts.
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. Link local instance with Vercel and GitHub accounts (creates `.vercel` directory): `vercel link`
-3. Download your environment variables: `vercel env pull`
-
-> For Neon/Vercel Postgres deployments expose both `POSTGRES_URL` (for application runtime) and `POSTGRES_URL_NON_POOLING` (for migrations/extensions). The `db:migrate` script automatically falls back to `POSTGRES_URL` when the non-pooling string is unavailable.
-
-```bash
-pnpm install
-pnpm db:migrate # Setup database or apply latest database changes
-pnpm dev
-```
-
-Your app template should now be running on [localhost:3000](http://localhost:3000).
-
-### Vercel build configuration
-
-When deploying to Vercel make sure migrations run before the `scripts/ingest-mafi-shots.ts` script executes:
-
-1. In **Project Settings → Build & Development Settings**, set the **Build Command** to `pnpm run build` (or explicitly `pnpm db:migrate && pnpm ingest:mafi && next build`). This guarantees the database schema exists before the ingestion script verifies the tables.
-2. Add either `POSTGRES_URL_NON_POOLING` or `POSTGRES_URL` to the **Build** environment scope (in addition to the Runtime scope). `lib/db/migrate.ts` and the ingest script both exit early when they cannot connect to the database during the build.
-3. Redeploy and confirm that the build log for `pnpm ingest:mafi` no longer prints the missing-table warning. That log line only appears when the schema has not been provisioned yet.
-
-### Updating the MAFI shot archive
-
-The MAFI archive stored in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script, which runs `pnpm db:migrate && pnpm ingest:mafi`. The same migration + ingestion pair now also runs before `next build`, so Vercel deployments always migrate and ingest during the build step without additional configuration. The ingestion script verifies that the `shots` tables exist and will instruct you to run the migration if they are missing. Run the ingestion script manually whenever you add or update markdown files to refresh the database incrementally:
-
-```bash
-pnpm ingest:mafi
-```
-
-Pass `-- --prune` to remove database records for files that no longer exist locally:
-
-```bash
-pnpm ingest:mafi -- --prune
-```

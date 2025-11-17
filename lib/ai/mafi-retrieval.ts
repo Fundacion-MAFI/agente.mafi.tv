@@ -11,9 +11,8 @@ export type RetrievedShot = Shot & {
   similarity: number;
 };
 
-// Default top-k tuned to surface loosely related shots even when close matches are scarce.
-const DEFAULT_RETRIEVAL_K = 24;
-const MAX_RESULT_LIMIT = 50;
+const DEFAULT_RETRIEVAL_K = 20;
+const MAX_RESULT_LIMIT = 10;
 const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
 const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
 
