@@ -14,9 +14,19 @@ export type RetrievedShot = Shot & {
 const DEFAULT_RETRIEVAL_K = 24;
 const MAX_RESULT_LIMIT = 50;
 const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
+const CACHE_TTL_MS = 5 * 60_000;
+const CACHE_MAX_ENTRIES = 128;
 const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
 
 let sqlClient: ReturnType<typeof postgres> | null = null;
+
+type CacheEntry<T> = {
+  value: T;
+  expiresAt: number;
+};
+
+const embeddingCache = new Map<string, CacheEntry<number[]>>();
+const retrievalCache = new Map<string, CacheEntry<RetrievedShot[]>>();
 
 function getSqlClient() {
   if (!process.env.POSTGRES_URL) {
@@ -33,6 +43,29 @@ function getSqlClient() {
 function buildVectorLiteral(embedding: number[]): string {
   const formatted = embedding.map((value) => Number(value).toFixed(6));
   return `[${formatted.join(",")}]`;
+}
+
+function getCachedValue<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
+  const cached = cache.get(key);
+  if (!cached) return null;
+
+  if (cached.expiresAt < Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+
+  return cached.value;
+}
+
+function setCachedValue<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T) {
+  if (cache.size >= CACHE_MAX_ENTRIES) {
+    const [oldestKey] = cache.keys();
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+
+  cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 type RetrievedShotRow = {
@@ -153,26 +186,41 @@ export async function retrieveRelevantShots(
     return [];
   }
 
-  const { embeddings } = await withTimeout(
-    embedMany({
-      model: embeddingModel,
-      values: [normalizedQuery],
-      abortSignal: signal,
-    }),
-    {
-      context: "embedding Archivo query",
-      timeoutMs,
-      signal,
-    },
-  );
+  const safeLimit = Math.max(1, Math.min(limit, MAX_RESULT_LIMIT));
+  const retrievalCacheKey = `${safeLimit}:${normalizedQuery}`;
+  const cachedShots = getCachedValue(retrievalCache, retrievalCacheKey);
+  if (cachedShots) {
+    return cachedShots.map((shot) => ({ ...shot }));
+  }
 
-  const [queryEmbedding] = embeddings ?? [];
+  const cachedEmbedding = getCachedValue(embeddingCache, normalizedQuery);
+  const embeddingResult = cachedEmbedding
+    ? null
+    : await withTimeout(
+        embedMany({
+          model: embeddingModel,
+          values: [normalizedQuery],
+          abortSignal: signal,
+        }),
+        {
+          context: "embedding Archivo query",
+          timeoutMs,
+          signal,
+        },
+      );
+
+  const [queryEmbedding] = cachedEmbedding
+    ? [cachedEmbedding]
+    : embeddingResult?.embeddings ?? [];
   if (!queryEmbedding?.length) {
     return [];
   }
 
+  if (!cachedEmbedding) {
+    setCachedValue(embeddingCache, normalizedQuery, queryEmbedding);
+  }
+
   const vectorLiteral = buildVectorLiteral(queryEmbedding);
-  const safeLimit = Math.max(1, Math.min(limit, MAX_RESULT_LIMIT));
   const sql = getSqlClient();
 
   const rows = await withTimeout(
@@ -205,8 +253,16 @@ export async function retrieveRelevantShots(
     },
   );
 
-  return rows.map((row) => ({
+  const shots = rows.map((row) => ({
     ...row,
     similarity: Number(row.similarity),
   }));
+
+  setCachedValue(
+    retrievalCache,
+    retrievalCacheKey,
+    shots.map((shot) => ({ ...shot })),
+  );
+
+  return shots;
 }
