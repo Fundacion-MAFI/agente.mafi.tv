@@ -70,7 +70,7 @@ export function Chat({
   });
 
   const { mutate } = useSWRConfig();
-  const { setDataStream, setStatusText } = useDataStream();
+  const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>("");
   const initialMode: MessageMode =
@@ -128,15 +128,11 @@ export function Chat({
       if (dataPart.type === "data-usage") {
         setUsage(dataPart.data);
       }
-      if (dataPart.type === "status") {
-        setStatusText(dataPart.data);
-      }
     },
     onFinish: () => {
       setLastStreamActivityAt(null);
       clearStreamWatchdogTimeout();
       mutate(unstable_serialize(getChatHistoryPaginationKey));
-      setStatusText(null);
     },
     onError: (error) => {
       setLastStreamActivityAt(null);

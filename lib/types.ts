@@ -31,7 +31,6 @@ export type ChatTools = {
 };
 
 export type CustomUIDataTypes = {
-  status: string;
   textDelta: string;
   imageDelta: string;
   sheetDelta: string;
