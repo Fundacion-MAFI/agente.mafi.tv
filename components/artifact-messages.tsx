@@ -5,7 +5,6 @@ import { memo } from "react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
-import { useDataStream } from "./data-stream-provider";
 import type { UIArtifact } from "./artifact";
 import { PreviewMessage, ThinkingMessage } from "./message";
 
@@ -38,7 +37,6 @@ function PureArtifactMessages({
   } = useMessages({
     status,
   });
-  const { statusText } = useDataStream();
 
   return (
     <div
@@ -66,10 +64,7 @@ function PureArtifactMessages({
       ))}
 
       <AnimatePresence mode="wait">
-        {(status === "submitted" ||
-          (status === "streaming" && messages.at(-1)?.mode === "archivo")) && (
-          <ThinkingMessage key="thinking" statusText={statusText} />
-        )}
+        {status === "submitted" && <ThinkingMessage key="thinking" />}
       </AnimatePresence>
 
       <motion.div
