@@ -1,5 +1,4 @@
-"use client";
-
+import { useDataStream } from "@/components/data-stream-provider";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import type { ComponentProps } from "react";
@@ -115,6 +114,7 @@ export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger>;
 export const ReasoningTrigger = memo(
   ({ className, children, ...props }: ReasoningTriggerProps) => {
     const { isStreaming, isOpen, duration } = useReasoning();
+    const { statusText } = useDataStream();
 
     return (
       <CollapsibleTrigger
@@ -128,7 +128,7 @@ export const ReasoningTrigger = memo(
           <>
             <BrainIcon className="size-4" />
             {isStreaming || duration === 0 ? (
-              <p>Investigando</p>
+              <p>{statusText ?? "Investigando"}</p>
             ) : (
               <p>Investigué por {duration}s</p>
             )}

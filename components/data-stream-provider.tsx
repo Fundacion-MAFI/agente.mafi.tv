@@ -10,6 +10,8 @@ type DataStreamContextValue = {
   setDataStream: React.Dispatch<
     React.SetStateAction<DataUIPart<CustomUIDataTypes>[]>
   >;
+  statusText: string | null;
+  setStatusText: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 const DataStreamContext = createContext<DataStreamContextValue | null>(null);
@@ -22,8 +24,12 @@ export function DataStreamProvider({
   const [dataStream, setDataStream] = useState<DataUIPart<CustomUIDataTypes>[]>(
     []
   );
+  const [statusText, setStatusText] = useState<string | null>(null);
 
-  const value = useMemo(() => ({ dataStream, setDataStream }), [dataStream]);
+  const value = useMemo(
+    () => ({ dataStream, setDataStream, statusText, setStatusText }),
+    [dataStream, statusText]
+  );
 
   return (
     <DataStreamContext.Provider value={value}>
