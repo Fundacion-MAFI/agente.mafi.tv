@@ -41,7 +41,7 @@ function PureMessages({
     status,
   });
 
-  useDataStream();
+  const { statusText } = useDataStream();
 
   useEffect(() => {
     if (status === "submitted") {
@@ -90,7 +90,10 @@ function PureMessages({
           ))}
 
           <AnimatePresence mode="wait">
-            {status === "submitted" && <ThinkingMessage key="thinking" />}
+            {(status === "submitted" ||
+              (status === "streaming" && messages.at(-1)?.mode === "archivo")) && (
+              <ThinkingMessage key="thinking" statusText={statusText} />
+            )}
           </AnimatePresence>
 
           <div
