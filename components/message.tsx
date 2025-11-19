@@ -309,7 +309,7 @@ export const PreviewMessage = memo(
   }
 );
 
-export const ThinkingMessage = ({ statusText }: { statusText: string | null }) => {
+export const ThinkingMessage = () => {
   const role = "assistant";
 
   return (
@@ -329,7 +329,7 @@ export const ThinkingMessage = ({ statusText }: { statusText: string | null }) =
 
         <div className="flex w-full flex-col gap-2 md:gap-4">
           <div className="p-0 text-muted-foreground text-sm">
-            {statusText ?? "Investigando..."}
+            Investigando...
           </div>
         </div>
       </div>
