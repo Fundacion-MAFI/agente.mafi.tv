@@ -2,6 +2,9 @@ import { Artifact } from "@/components/create-artifact";
 import { DocumentSkeleton } from "@/components/document-skeleton";
 import type { MafiPlaylistDocumentEntry } from "@/lib/artifacts/mafi-playlist";
 import { safeParseMafiPlaylistDocument } from "@/lib/artifacts/mafi-playlist";
+import Player from "@vimeo/player";
+import { useInView } from "framer-motion";
+import { useEffect, useRef } from "react";
 
 function formatStartLabel(entry: MafiPlaylistDocumentEntry): string | undefined {
   if (entry.startTimeLabel?.trim()) {
@@ -27,18 +30,74 @@ function formatStartLabel(entry: MafiPlaylistDocumentEntry): string | undefined 
   return undefined;
 }
 
-function getVimeoEmbedSrc(entry: MafiPlaylistDocumentEntry): string | null {
-  if (!entry.vimeoId) {
-    return null;
-  }
+function VimeoPlayer({
+  videoId,
+  title,
+  startTime,
+}: {
+  videoId: string;
+  title: string;
+  startTime?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerRef = useRef<Player | null>(null);
+  const isInView = useInView(containerRef, { amount: 0.5 });
 
-  const startSeconds =
-    typeof entry.startTimeSeconds === "number"
-      ? Math.max(0, Math.floor(entry.startTimeSeconds))
-      : undefined;
-  const startFragment = startSeconds ? `#t=${startSeconds}s` : "";
+  useEffect(() => {
+    if (!iframeRef.current) return;
 
-  return `https://player.vimeo.com/video/${entry.vimeoId}${startFragment}`;
+    const player = new Player(iframeRef.current);
+    playerRef.current = player;
+
+    return () => {
+      player.unload();
+    };
+  }, []);
+
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    if (isInView) {
+      player.getPaused().then((paused: boolean) => {
+        if (paused) {
+          player.getCurrentTime().then((seconds: number) => {
+            // If the video is at the beginning (less than 1s played), seek to start time
+            if (seconds < 1) {
+              const start = startTime ?? 4;
+              player
+                .setCurrentTime(start)
+                .then(() => player.play())
+                .catch(() => player.play());
+            } else {
+              player.play().catch(() => {});
+            }
+          });
+        }
+      });
+    } else {
+      player.getPaused().then((paused: boolean) => {
+        if (!paused) {
+          player.pause().catch(() => {});
+        }
+      });
+    }
+  }, [isInView, startTime]);
+
+  return (
+    <div ref={containerRef} className="h-full w-full">
+      <iframe
+        ref={iframeRef}
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+        className="h-full w-full"
+        loading="lazy"
+        src={`https://player.vimeo.com/video/${videoId}`}
+        title={title}
+      />
+    </div>
+  );
 }
 
 function PlaylistEntry({
@@ -49,7 +108,6 @@ function PlaylistEntry({
   index: number;
 }) {
   const startLabel = formatStartLabel(entry);
-  const videoSrc = getVimeoEmbedSrc(entry);
 
   const metadata: { label: string; value: string | undefined }[] = [
     { label: "Autoría", value: entry.author ?? undefined },
@@ -72,14 +130,15 @@ function PlaylistEntry({
       </div> */}
 
       <div className="aspect-video w-full overflow-hidden rounded-2xl border bg-black">
-        {videoSrc ? (
-          <iframe
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            className="h-full w-full"
-            loading="lazy"
-            src={videoSrc}
+        {entry.vimeoId ? (
+          <VimeoPlayer
+            videoId={entry.vimeoId}
             title={entry.title}
+            startTime={
+              typeof entry.startTimeSeconds === "number"
+                ? entry.startTimeSeconds
+                : undefined
+            }
           />
         ) : (
           <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
