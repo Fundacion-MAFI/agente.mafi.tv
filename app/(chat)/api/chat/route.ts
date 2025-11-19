@@ -590,7 +590,7 @@ export async function POST(request: Request) {
       let retrievedShots: RetrievedShot[] = [];
 
       try {
-        dataStream.write({ type: "status", data: "Buscando en el archivo MAFI…" });
+        dataStream.write({ type: "data-status", data: "Buscando en el archivo MAFI…" });
         retrievedShots = await retrieveRelevantShots(questionText, {
           signal: retrievalAbortSignal,
           timeoutMs: ARCHIVO_RETRIEVAL_TIMEOUT_MS,
@@ -606,7 +606,7 @@ export async function POST(request: Request) {
       }
 
       try {
-        dataStream.write({ type: "status", data: "Encontrando planos relacionados…" });
+        dataStream.write({ type: "data-status", data: "Encontrando planos relacionados…" });
         const playlistAbortController = new AbortController();
         const playlistAbortSignal = playlistAbortController.signal;
         const retrievalContext = serializeShotsForPrompt(
@@ -618,7 +618,7 @@ export async function POST(request: Request) {
           ? selectedChatModel
           : DEFAULT_ARCHIVO_MODEL_ID;
         const archiveModel = myProvider.languageModel(archivoModelId);
-        dataStream.write({ type: "status", data: "Construyendo narrativa…" });
+        dataStream.write({ type: "data-status", data: "Construyendo narrativa…" });
         const objectResult = streamObject({
           model: archiveModel,
           system: AGENTE_FILMICO_SYSTEM_PROMPT,
@@ -683,7 +683,7 @@ export async function POST(request: Request) {
           }
         }
 
-        dataStream.write({ type: "status", data: "Creando lista de reproducción…" });
+        dataStream.write({ type: "data-status", data: "Creando lista de reproducción…" });
         const documentId = generateUUID();
         const documentTitle = buildPlaylistDocumentTitle(questionText);
         const documentContent = buildPlaylistDocumentContent({
