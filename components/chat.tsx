@@ -128,7 +128,7 @@ export function Chat({
       if (dataPart.type === "data-usage") {
         setUsage(dataPart.data);
       }
-      if (dataPart.type === "status") {
+      if (dataPart.type === "data-status") {
         setStatusText(dataPart.data);
       }
     },
