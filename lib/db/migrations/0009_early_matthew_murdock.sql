@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "embedding_idx" ON "shot_embeddings" USING hnsw ("embedding" vector_cosine_ops);

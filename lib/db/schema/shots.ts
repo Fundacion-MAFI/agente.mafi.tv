@@ -53,6 +53,10 @@ export const shotEmbeddings = pgTable(
   },
   table => ({
     shotIdIdx: index("shot_embeddings_shot_id_idx").on(table.shotId),
+    embeddingIndex: index("embedding_idx").using(
+      "hnsw",
+      table.embedding.op("vector_cosine_ops"),
+    ),
   })
 );
 

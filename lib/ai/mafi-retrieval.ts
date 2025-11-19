@@ -174,9 +174,9 @@ export async function retrieveRelevantShots(
   const vectorLiteral = buildVectorLiteral(queryEmbedding);
   const safeLimit = Math.max(1, Math.min(limit, MAX_RESULT_LIMIT));
 
+  const sql = getSqlClient();
   const rows = await withTimeout(
-    getSqlClient().unsafe<RetrievedShotRow[]>(
-      `
+    sql<RetrievedShotRow[]>`
     SELECT
       s.id,
       s.slug,
@@ -192,13 +192,12 @@ export async function retrieveRelevantShots(
       s.created_at AS "createdAt",
       s.updated_at AS "updatedAt",
       se.content AS "chunkContent",
-      1 - (se.embedding <=> '${vectorLiteral}'::vector) AS "similarity"
+      1 - (se.embedding <=> ${vectorLiteral}::vector) AS "similarity"
     FROM shot_embeddings se
     JOIN shots s ON s.id = se.shot_id
-    ORDER BY se.embedding <=> '${vectorLiteral}'::vector
+    ORDER BY se.embedding <=> ${vectorLiteral}::vector
     LIMIT ${safeLimit}
   `,
-    ),
     {
       context: "querying Archivo vectors",
       timeoutMs,
