@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -85,6 +86,19 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-PTLHHS20ZV"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-PTLHHS20ZV');
+          `}
+        </Script>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
