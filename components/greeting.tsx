@@ -13,7 +13,7 @@ export const Greeting = () => {
         initial={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.5 }}
       >
-        Hola, soy el Agente Fílmico del archivo MAFI.
+        Hola, soy el Agente Fílmico del archivo MAFI2.
       </motion.div>
       <motion.div
         animate={{ opacity: 1, y: 0 }}
