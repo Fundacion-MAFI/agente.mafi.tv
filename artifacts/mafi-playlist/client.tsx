@@ -1,12 +1,14 @@
+import Player from "@vimeo/player";
+import { useInView } from "framer-motion";
+import { useEffect, useRef } from "react";
 import { Artifact } from "@/components/create-artifact";
 import { DocumentSkeleton } from "@/components/document-skeleton";
 import type { MafiPlaylistDocumentEntry } from "@/lib/artifacts/mafi-playlist";
 import { safeParseMafiPlaylistDocument } from "@/lib/artifacts/mafi-playlist";
-import Player from "@vimeo/player";
-import { useInView } from "framer-motion";
-import { useEffect, useRef } from "react";
 
-function formatStartLabel(entry: MafiPlaylistDocumentEntry): string | undefined {
+function formatStartLabel(
+  entry: MafiPlaylistDocumentEntry
+): string | undefined {
   if (entry.startTimeLabel?.trim()) {
     return entry.startTimeLabel;
   }
@@ -27,7 +29,7 @@ function formatStartLabel(entry: MafiPlaylistDocumentEntry): string | undefined 
     return parts.join(":");
   }
 
-  return undefined;
+  return;
 }
 
 function VimeoPlayer({
@@ -45,7 +47,9 @@ function VimeoPlayer({
   const isInView = useInView(containerRef, { amount: 0.5 });
 
   useEffect(() => {
-    if (!iframeRef.current) return;
+    if (!iframeRef.current) {
+      return;
+    }
 
     const player = new Player(iframeRef.current);
     playerRef.current = player;
@@ -57,7 +61,9 @@ function VimeoPlayer({
 
   useEffect(() => {
     const player = playerRef.current;
-    if (!player) return;
+    if (!player) {
+      return;
+    }
 
     if (isInView) {
       player.getPaused().then((paused: boolean) => {
@@ -71,7 +77,9 @@ function VimeoPlayer({
                 .then(() => player.play())
                 .catch(() => player.play());
             } else {
-              player.play().catch(() => {});
+              player.play().catch(() => {
+                // ignore
+              });
             }
           });
         }
@@ -79,20 +87,22 @@ function VimeoPlayer({
     } else {
       player.getPaused().then((paused: boolean) => {
         if (!paused) {
-          player.pause().catch(() => {});
+          player.pause().catch(() => {
+            // ignore
+          });
         }
       });
     }
   }, [isInView, startTime]);
 
   return (
-    <div ref={containerRef} className="h-full w-full">
+    <div className="h-full w-full" ref={containerRef}>
       <iframe
-        ref={iframeRef}
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
         className="h-full w-full"
         loading="lazy"
+        ref={iframeRef}
         src={`https://player.vimeo.com/video/${videoId}`}
         title={title}
       />
@@ -102,12 +112,11 @@ function VimeoPlayer({
 
 function PlaylistEntry({
   entry,
-  index,
 }: {
   entry: MafiPlaylistDocumentEntry;
   index: number;
 }) {
-  const startLabel = formatStartLabel(entry);
+  const _startLabel = formatStartLabel(entry);
 
   const metadata: { label: string; value: string | undefined }[] = [
     { label: "Autoría", value: entry.author ?? undefined },
@@ -132,16 +141,16 @@ function PlaylistEntry({
       <div className="aspect-video w-full overflow-hidden rounded-2xl border bg-black">
         {entry.vimeoId ? (
           <VimeoPlayer
-            videoId={entry.vimeoId}
-            title={entry.title}
             startTime={
               typeof entry.startTimeSeconds === "number"
                 ? entry.startTimeSeconds
                 : undefined
             }
+            title={entry.title}
+            videoId={entry.vimeoId}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
+          <div className="flex h-full items-center justify-center text-center text-muted-foreground text-sm">
             Clip sin vista previa disponible
           </div>
         )}
@@ -149,23 +158,23 @@ function PlaylistEntry({
 
       <div className="space-y-3">
         <div>
-          <h3 className="text-2xl font-semibold leading-snug">{entry.title}</h3>
-          <p className="text-sm text-muted-foreground">{entry.reason}</p>
+          <h3 className="font-semibold text-2xl leading-snug">{entry.title}</h3>
+          <p className="text-muted-foreground text-sm">{entry.reason}</p>
           {entry.supportingDetail ? (
-            <p className="text-sm text-muted-foreground/80">
+            <p className="text-muted-foreground/80 text-sm">
               {entry.supportingDetail}
             </p>
           ) : null}
         </div>
 
         {metadata.length > 0 ? (
-          <dl className="grid gap-3 text-xs text-muted-foreground sm:grid-cols-2">
+          <dl className="grid gap-3 text-muted-foreground text-xs sm:grid-cols-2">
             {metadata.map((item) => (
               <div key={item.label}>
                 <dt className="text-[0.6rem] uppercase tracking-wide">
                   {item.label}
                 </dt>
-                <dd className="text-sm text-foreground">{item.value}</dd>
+                <dd className="text-foreground text-sm">{item.value}</dd>
               </div>
             ))}
           </dl>
@@ -175,7 +184,7 @@ function PlaylistEntry({
           <div className="flex flex-wrap gap-2">
             {entry.tags.map((tag) => (
               <span
-                className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground"
+                className="rounded-full bg-muted px-3 py-1 text-muted-foreground text-xs"
                 key={tag}
               >
                 #{tag}
@@ -189,7 +198,6 @@ function PlaylistEntry({
             “{entry.excerpt}”
           </blockquote>
         ) : null} */}
-        
       </div>
     </article>
   );
@@ -198,7 +206,9 @@ function PlaylistEntry({
 export const mafiPlaylistArtifact = new Artifact<"mafi-playlist">({
   kind: "mafi-playlist",
   description: "Curated selections from Archivo MAFI.",
-  initialize: async () => undefined,
+  initialize: async () => {
+    // no-op
+  },
   onStreamPart: ({ streamPart, setArtifact }) => {
     if (streamPart.type === "data-clear") {
       setArtifact((draftArtifact) => ({
@@ -236,7 +246,7 @@ export const mafiPlaylistArtifact = new Artifact<"mafi-playlist">({
 
     if (!parsed) {
       return (
-        <div className="flex w-full flex-col gap-4 px-4 py-8 text-sm text-muted-foreground">
+        <div className="flex w-full flex-col gap-4 px-4 py-8 text-muted-foreground text-sm">
           <p>No se pudo cargar la playlist del archivo MAFI.</p>
           <p>Intenta regenerar la respuesta o vuelve a abrir el documento.</p>
         </div>
@@ -246,24 +256,24 @@ export const mafiPlaylistArtifact = new Artifact<"mafi-playlist">({
     return (
       <div className="flex w-full flex-col gap-8 px-4 py-8 md:px-12 md:py-12">
         <section className="space-y-3">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="text-muted-foreground text-xs uppercase tracking-wide">
             Pregunta
           </div>
-          <p className="text-lg font-medium leading-relaxed text-foreground">
+          <p className="font-medium text-foreground text-lg leading-relaxed">
             {parsed.question}
           </p>
           <div className="rounded-3xl border border-border bg-muted/30 p-4">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="text-muted-foreground text-xs uppercase tracking-wide">
               Comentario general
             </div>
-            <p className="mt-1 text-base leading-relaxed text-foreground">
+            <p className="mt-1 text-base text-foreground leading-relaxed">
               {parsed.generalComment}
             </p>
           </div>
         </section>
 
         {parsed.playlist.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-muted-foreground/40 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+          <div className="rounded-3xl border border-muted-foreground/40 border-dashed bg-muted/20 p-6 text-center text-muted-foreground text-sm">
             No se encontraron planos relevantes para esta consigna.
           </div>
         ) : (

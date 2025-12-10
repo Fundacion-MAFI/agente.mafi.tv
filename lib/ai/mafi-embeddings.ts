@@ -1,14 +1,18 @@
-import { embedMany } from "ai";
 import { gateway } from "@ai-sdk/gateway";
+import { embedMany } from "ai";
 
 const DEFAULT_CHUNK_SIZE = 800;
 const DEFAULT_CHUNK_OVERLAP = 200;
-const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
+const embeddingModel = gateway.textEmbeddingModel(
+  "openai/text-embedding-3-small"
+);
 
 export type ShotEmbeddingChunk = {
   content: string;
   embedding: number[];
 };
+
+const PARAGRAPH_SPLITTER = /\n{2,}/;
 
 export function chunkShotText(
   text: string,
@@ -25,8 +29,8 @@ export function chunkShotText(
   }
 
   const paragraphs = normalized
-    .split(/\n{2,}/)
-    .map(part => part.trim())
+    .split(PARAGRAPH_SPLITTER)
+    .map((part) => part.trim())
     .filter(Boolean);
 
   const chunks: string[] = [];

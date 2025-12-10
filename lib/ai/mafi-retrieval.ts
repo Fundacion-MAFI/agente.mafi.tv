@@ -1,7 +1,7 @@
 import "server-only";
 
-import { embedMany } from "ai";
 import { gateway } from "@ai-sdk/gateway";
+import { embedMany } from "ai";
 import postgres from "postgres";
 
 import type { Shot } from "@/lib/db/schema";
@@ -16,7 +16,9 @@ const MAX_RESULT_LIMIT = 50;
 const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
 const CACHE_TTL_MS = 5 * 60_000;
 const CACHE_MAX_ENTRIES = 128;
-const embeddingModel = gateway.textEmbeddingModel("openai/text-embedding-3-small");
+const embeddingModel = gateway.textEmbeddingModel(
+  "openai/text-embedding-3-small"
+);
 
 let sqlClient: ReturnType<typeof postgres> | null = null;
 
@@ -45,9 +47,14 @@ function buildVectorLiteral(embedding: number[]): string {
   return `[${formatted.join(",")}]`;
 }
 
-function getCachedValue<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
+function getCachedValue<T>(
+  cache: Map<string, CacheEntry<T>>,
+  key: string
+): T | null {
   const cached = cache.get(key);
-  if (!cached) return null;
+  if (!cached) {
+    return null;
+  }
 
   if (cached.expiresAt < Date.now()) {
     cache.delete(key);
@@ -57,7 +64,11 @@ function getCachedValue<T>(cache: Map<string, CacheEntry<T>>, key: string): T | 
   return cached.value;
 }
 
-function setCachedValue<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T) {
+function setCachedValue<T>(
+  cache: Map<string, CacheEntry<T>>,
+  key: string,
+  value: T
+) {
   if (cache.size >= CACHE_MAX_ENTRIES) {
     const [oldestKey] = cache.keys();
     if (oldestKey) {
@@ -103,7 +114,7 @@ export class ArchivoTimeoutError extends Error {
     super(
       reason === "timeout"
         ? `Archivo retrieval timed out while ${context} after ${timeoutMs}ms`
-        : `Archivo retrieval aborted while ${context}`,
+        : `Archivo retrieval aborted while ${context}`
     );
     this.name = "ArchivoTimeoutError";
     this.context = context;
@@ -122,7 +133,7 @@ function withTimeout<T>(
     context: string;
     timeoutMs: number;
     signal?: AbortSignal;
-  },
+  }
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -157,7 +168,9 @@ function withTimeout<T>(
 
     timeoutId = setTimeout(() => {
       cleanup();
-      reject(new ArchivoTimeoutError({ context, timeoutMs, reason: "timeout" }));
+      reject(
+        new ArchivoTimeoutError({ context, timeoutMs, reason: "timeout" })
+      );
     }, timeoutMs);
 
     promise.then(
@@ -168,7 +181,7 @@ function withTimeout<T>(
       (error) => {
         cleanup();
         reject(error);
-      },
+      }
     );
   });
 }
@@ -179,7 +192,7 @@ export async function retrieveRelevantShots(
     limit = DEFAULT_RETRIEVAL_K,
     signal,
     timeoutMs = DEFAULT_RETRIEVAL_TIMEOUT_MS,
-  }: { limit?: number; signal?: AbortSignal; timeoutMs?: number } = {},
+  }: { limit?: number; signal?: AbortSignal; timeoutMs?: number } = {}
 ): Promise<RetrievedShot[]> {
   const normalizedQuery = query.replace(/\s+/g, " ").trim();
   if (!normalizedQuery) {
@@ -206,12 +219,12 @@ export async function retrieveRelevantShots(
           context: "embedding Archivo query",
           timeoutMs,
           signal,
-        },
+        }
       );
 
   const [queryEmbedding] = cachedEmbedding
     ? [cachedEmbedding]
-    : embeddingResult?.embeddings ?? [];
+    : (embeddingResult?.embeddings ?? []);
   if (!queryEmbedding?.length) {
     return [];
   }
@@ -249,7 +262,7 @@ export async function retrieveRelevantShots(
       context: "querying Archivo vectors",
       timeoutMs,
       signal,
-    },
+    }
   );
 
   const shots = rows.map((row) => ({
@@ -260,7 +273,7 @@ export async function retrieveRelevantShots(
   setCachedValue(
     retrievalCache,
     retrievalCacheKey,
-    shots.map((shot) => ({ ...shot })),
+    shots.map((shot) => ({ ...shot }))
   );
 
   return shots;

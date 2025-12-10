@@ -25,15 +25,12 @@ export const shots = pgTable(
     place: text("place"),
     author: text("author"),
     geotag: text("geotag"),
-    tags: text("tags")
-      .array()
-      .notNull()
-      .default(sql`ARRAY[]::text[]`),
+    tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
     checksum: varchar("checksum", { length: 64 }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  table => ({
+  (table) => ({
     slugUnique: uniqueIndex("shots_slug_unique").on(table.slug),
   })
 );
@@ -51,11 +48,11 @@ export const shotEmbeddings = pgTable(
     embedding: vector("embedding", { dimensions: VECTOR_DIMENSIONS }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  table => ({
+  (table) => ({
     shotIdIdx: index("shot_embeddings_shot_id_idx").on(table.shotId),
     embeddingIndex: index("embedding_idx").using(
       "hnsw",
-      table.embedding.op("vector_cosine_ops"),
+      table.embedding.op("vector_cosine_ops")
     ),
   })
 );

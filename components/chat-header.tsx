@@ -6,7 +6,7 @@ import { useWindowSize } from "usehooks-ts";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PlusIcon, VercelIcon } from "./icons";
+import { PlusIcon } from "./icons";
 import { useSidebar } from "./ui/sidebar";
 import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
 
@@ -50,7 +50,7 @@ function PureChatHeader({
           chatId={chatId}
           className={cn(
             "order-1 md:order-2",
-            !showDeployButton && !showNewChatButton && "md:ml-auto",
+            !showDeployButton && !showNewChatButton && "md:ml-auto"
           )}
           selectedVisibilityType={selectedVisibilityType}
         />

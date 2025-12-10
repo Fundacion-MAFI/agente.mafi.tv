@@ -73,6 +73,11 @@ const ARCHIVO_PLAYLIST_TIMEOUT_MS = 28_000;
 const ARCHIVO_OFFLINE_MESSAGE =
   "El modo Archivo está temporalmente fuera de línea. Verifica la configuración del AI Gateway y vuelve a intentarlo.";
 
+const DIGITS_REGEX = /^\d+$/;
+const SECONDS_REGEX = /^\d+s$/;
+const HMS_REGEX = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/;
+const HASH_REGEX = /^#/;
+
 let globalStreamContext: ResumableStreamContext | null = null;
 
 const getTokenlensCatalog = cache(
@@ -187,15 +192,15 @@ function parseFlexibleTime(value: string | null | undefined): number | null {
     return null;
   }
 
-  if (/^\d+$/.test(normalized)) {
+  if (DIGITS_REGEX.test(normalized)) {
     return Number(normalized);
   }
 
-  if (/^\d+s$/.test(normalized)) {
+  if (SECONDS_REGEX.test(normalized)) {
     return Number(normalized.slice(0, -1));
   }
 
-  const hmsMatch = normalized.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  const hmsMatch = normalized.match(HMS_REGEX);
 
   if (hmsMatch && (hmsMatch[1] || hmsMatch[2] || hmsMatch[3])) {
     const hours = Number(hmsMatch[1] ?? 0);
@@ -253,7 +258,7 @@ function extractVimeoMetadata(url: string | null | undefined): {
     let hashStart: string | null = null;
 
     if (parsedUrl.hash) {
-      const hash = parsedUrl.hash.replace(/^#/, "");
+      const hash = parsedUrl.hash.replace(HASH_REGEX, "");
 
       if (hash.includes("=")) {
         const params = new URLSearchParams(hash);
@@ -643,12 +648,16 @@ export async function POST(request: Request) {
             playlistAbortController.abort(timeoutError),
         });
         const usage = await raceWithTimeout({
-          promise: objectResult.usage.catch(() => undefined),
+          promise: objectResult.usage.catch(() => {
+            // ignore
+          }),
           timeoutMs: ARCHIVO_PLAYLIST_TIMEOUT_MS,
           context: "collecting Archivo usage metrics",
           onTimeout: (timeoutError) =>
             playlistAbortController.abort(timeoutError),
-        }).catch(() => undefined);
+        }).catch(() => {
+          // ignore
+        });
 
         await playlistStreamPromise;
 

@@ -1,11 +1,10 @@
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import crypto from "node:crypto";
-
-import matter from "gray-matter";
 import { config } from "dotenv";
 import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
+import matter from "gray-matter";
 import postgres from "postgres";
 
 import { generateShotEmbeddings } from "../lib/ai/mafi-embeddings";
@@ -41,7 +40,7 @@ type ShotFrontMatter = {
 
 async function getMarkdownFiles() {
   const files = await fs.readdir(dataDirectory);
-  return files.filter(file => file.endsWith(".md")).sort();
+  return files.filter((file) => file.endsWith(".md")).sort();
 }
 
 async function ensureShotsSchema() {
@@ -54,9 +53,13 @@ async function ensureShotsSchema() {
     shotEmbeddings: string | null;
   }[];
 
-  const missingTables = [];
-  if (!result?.shots) missingTables.push("shots");
-  if (!result?.shotEmbeddings) missingTables.push("shot_embeddings");
+  const missingTables: string[] = [];
+  if (!result?.shots) {
+    missingTables.push("shots");
+  }
+  if (!result?.shotEmbeddings) {
+    missingTables.push("shot_embeddings");
+  }
 
   if (missingTables.length > 0) {
     console.warn(
@@ -77,12 +80,12 @@ function normalizeTags(raw: ShotFrontMatter["tags"]): string[] {
   }
 
   if (Array.isArray(raw)) {
-    return raw.map(tag => tag.trim()).filter(Boolean);
+    return raw.map((tag) => tag.trim()).filter(Boolean);
   }
 
   return raw
     .split(",")
-    .map(tag => tag.trim())
+    .map((tag) => tag.trim())
     .filter(Boolean);
 }
 
@@ -123,7 +126,8 @@ async function upsertShotFromFile(relativePath: string) {
     .onConflictDoUpdate({ target: shots.slug, set: fields })
     .returning({ id: shots.id });
 
-  const shouldUpdateEmbeddings = existing.length === 0 || existing[0].checksum !== checksum;
+  const shouldUpdateEmbeddings =
+    existing.length === 0 || existing[0].checksum !== checksum;
 
   if (!shouldUpdateEmbeddings) {
     return { updatedEmbeddings: false };
@@ -139,18 +143,20 @@ async function upsertShotFromFile(relativePath: string) {
     tags.join(", "),
     contentBody,
   ]
-    .map(section => section?.trim())
+    .map((section) => section?.trim())
     .filter(Boolean)
     .join("\n\n");
 
   const embeddingChunks = await generateShotEmbeddings(textToEmbed);
 
-  await db.transaction(async tx => {
-    await tx.delete(shotEmbeddings).where(eq(shotEmbeddings.shotId, upserted.id));
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(shotEmbeddings)
+      .where(eq(shotEmbeddings.shotId, upserted.id));
 
     if (embeddingChunks.length > 0) {
       await tx.insert(shotEmbeddings).values(
-        embeddingChunks.map(chunk => ({
+        embeddingChunks.map((chunk) => ({
           shotId: upserted.id,
           content: chunk.content,
           embedding: chunk.embedding,
@@ -169,8 +175,8 @@ async function pruneRemovedShots(processedSlugs: Set<string>) {
 
   const existing = await db.select({ slug: shots.slug }).from(shots);
   const toDelete = existing
-    .map(record => record.slug)
-    .filter(slug => !processedSlugs.has(slug));
+    .map((record) => record.slug)
+    .filter((slug) => !processedSlugs.has(slug));
 
   if (toDelete.length === 0) {
     return 0;
@@ -208,7 +214,7 @@ async function main() {
   await sqlClient.end();
 }
 
-main().catch(async error => {
+main().catch(async (error) => {
   console.error("❌ Failed to ingest MAFI shots");
   console.error(error);
   await sqlClient.end();

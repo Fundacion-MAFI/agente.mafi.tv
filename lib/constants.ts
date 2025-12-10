@@ -8,18 +8,17 @@ export const isTestEnvironment = Boolean(
 
 export const guestRegex = /^guest-\d+$/;
 
-export const STREAM_TROUBLESHOOTING_MESSAGE =
-  [
-    "What you (or another dev/LLM) should check in the repo:",
-    "",
-    "Network tab:",
-    "/api/chat returns 504",
-    "",
-    "Server logs (Vercel):",
-    "Any errors from streamObject / generateObject / embeddings?",
-    "",
-    "Env / provider config:",
-    "Correct model name?",
-    "API key / gateway token present?",
-    "Base URL pointing to the right provider?",
-  ].join("\n");
+export const STREAM_TROUBLESHOOTING_MESSAGE = [
+  "What you (or another dev/LLM) should check in the repo:",
+  "",
+  "Network tab:",
+  "/api/chat returns 504",
+  "",
+  "Server logs (Vercel):",
+  "Any errors from streamObject / generateObject / embeddings?",
+  "",
+  "Env / provider config:",
+  "Correct model name?",
+  "API key / gateway token present?",
+  "Base URL pointing to the right provider?",
+].join("\n");

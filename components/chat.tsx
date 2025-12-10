@@ -20,9 +20,9 @@ import {
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
-import type { Vote } from "@/lib/db/schema";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { STREAM_TROUBLESHOOTING_MESSAGE } from "@/lib/constants";
+import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { Attachment, ChatMessage, MessageMode } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
@@ -38,7 +38,9 @@ import type { VisibilityType } from "./visibility-selector";
 const STREAM_WATCHDOG_TIMEOUT_MS = 15_000;
 
 type TelemetryCapableWindow = typeof window & {
-  posthog?: { capture?: (event: string, properties?: Record<string, unknown>) => void };
+  posthog?: {
+    capture?: (event: string, properties?: Record<string, unknown>) => void;
+  };
   Sentry?: {
     captureMessage?: (
       message: string,
@@ -83,8 +85,12 @@ export function Chat({
   const selectedChatModel =
     messageMode === "archivo" ? "film-agent" : DEFAULT_CHAT_MODEL;
   const selectedChatModelRef = useRef(selectedChatModel);
-  const [lastStreamActivityAt, setLastStreamActivityAt] = useState<number | null>(null);
-  const streamWatchdogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lastStreamActivityAt, setLastStreamActivityAt] = useState<
+    number | null
+  >(null);
+  const streamWatchdogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   useEffect(() => {
     selectedChatModelRef.current = selectedChatModel;
@@ -111,15 +117,15 @@ export function Chat({
       api: "/api/chat",
       fetch: fetchWithErrorHandlers,
       prepareSendMessagesRequest(request) {
-            return {
-              body: {
-                id: request.id,
-                message: request.messages.at(-1),
-                selectedChatModel: selectedChatModelRef.current,
-                selectedVisibilityType: visibilityType,
-                ...request.body,
-              },
-            };
+        return {
+          body: {
+            id: request.id,
+            message: request.messages.at(-1),
+            selectedChatModel: selectedChatModelRef.current,
+            selectedVisibilityType: visibilityType,
+            ...request.body,
+          },
+        };
       },
     }),
     onData: (dataPart) => {
@@ -241,10 +247,15 @@ export function Chat({
   ]);
 
   const handleRetryLastMessage = useCallback(() => {
-    const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === "user");
 
     if (!lastUserMessage) {
-      toast({ type: "error", description: "There isn't a previous message to retry." });
+      toast({
+        type: "error",
+        description: "There isn't a previous message to retry.",
+      });
       return;
     }
 
@@ -256,7 +267,9 @@ export function Chat({
     });
   }, [messages, sendMessage]);
 
-  const hasRetryableUserMessage = messages.some((message) => message.role === "user");
+  const hasRetryableUserMessage = messages.some(
+    (message) => message.role === "user"
+  );
 
   const searchParams = useSearchParams();
   const query = searchParams.get("query");
@@ -317,11 +330,11 @@ export function Chat({
               attachments={attachments}
               chatId={id}
               input={input}
+              messageMode={messageMode}
               messages={messages}
+              onModeChange={handleModeChange}
               selectedVisibilityType={visibilityType}
               sendMessage={sendMessage}
-              messageMode={messageMode}
-              onModeChange={handleModeChange}
               setAttachments={setAttachments}
               setInput={setInput}
               setMessages={setMessages}
@@ -390,8 +403,9 @@ export function Chat({
           <AlertDialogHeader>
             <AlertDialogTitle>Check the API connection</AlertDialogTitle>
             <AlertDialogDescription>
-              We stopped receiving data from the AI Gateway. Refresh the page or verify your
-              API connection. You can also retry your last message below.
+              We stopped receiving data from the AI Gateway. Refresh the page or
+              verify your API connection. You can also retry your last message
+              below.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

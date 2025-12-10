@@ -1,5 +1,4 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { formatDistance } from "date-fns";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -435,8 +434,7 @@ function PureArtifact({
                       Saving changes...
                     </div>
                   ) : document ? (
-                    <div className="text-muted-foreground text-sm">
-                    </div>
+                    <div className="text-muted-foreground text-sm" />
                   ) : (
                     <div className="mt-2 h-3 w-32 animate-pulse rounded-md bg-muted-foreground/20" />
                   )}

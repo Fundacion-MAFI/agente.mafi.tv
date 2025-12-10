@@ -22,7 +22,8 @@ export const Greeting = () => {
         initial={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.6 }}
       >
-        Pregúntame lo que quieras. Te compartiré planos, historias y enlaces para que juntos armemos tu propio recorrido por el archivo.
+        Pregúntame lo que quieras. Te compartiré planos, historias y enlaces
+        para que juntos armemos tu propio recorrido por el archivo.
       </motion.div>
     </div>
   );

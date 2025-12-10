@@ -87,8 +87,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                   if (status === "loading") {
                     toast({
                       type: "error",
-                      description:
-                        "Comprueba tu estado e inténtalo de nuevo.",
+                      description: "Comprueba tu estado e inténtalo de nuevo.",
                     });
 
                     return;

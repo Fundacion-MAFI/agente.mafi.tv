@@ -66,7 +66,10 @@ export class ChatSDKError extends Error {
       });
 
       return Response.json(
-        { code: "", message: "Algo salió mal. Por favor, inténtalo de nuevo más tarde." },
+        {
+          code: "",
+          message: "Algo salió mal. Por favor, inténtalo de nuevo más tarde.",
+        },
         { status: statusCode }
       );
     }

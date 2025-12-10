@@ -221,10 +221,7 @@ function PureMultimodalInput({
         </div>
         <PromptInputToolbar className="!border-top-0 border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
           <PromptInputTools className="gap-1 sm:gap-1.5">
-            <ModeSelector
-              mode={messageMode}
-              onModeChange={onModeChange}
-            />
+            <ModeSelector mode={messageMode} onModeChange={onModeChange} />
           </PromptInputTools>
 
           {status === "submitted" ? (
@@ -232,9 +229,9 @@ function PureMultimodalInput({
           ) : (
             <PromptInputSubmit
               className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+              data-testid="send-button"
               disabled={!input.trim()}
               status={status}
-              data-testid="send-button"
             >
               <ArrowUpIcon size={14} />
             </PromptInputSubmit>
@@ -301,8 +298,8 @@ function PureModeSelector({
     >
       <Trigger asChild>
         <Button
-          variant={mode === "archivo" ? "default" : "ghost"}
           className="h-8 px-2"
+          variant={mode === "archivo" ? "default" : "ghost"}
         >
           <BoxIcon size={16} />
           <span className="hidden font-medium text-xs sm:block">
