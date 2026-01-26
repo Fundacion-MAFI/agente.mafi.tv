@@ -267,10 +267,3 @@ To remove database records for files that no longer exist locally, pass the `--p
 ```bash
 pnpm ingest:mafi -- --prune
 ```
-
----
-
-## License
-This project is still to be licensed.
-```
-```
