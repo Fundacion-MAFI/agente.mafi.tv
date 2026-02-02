@@ -1,6 +1,6 @@
 <h1 align="center">Film Agent</h1>
 
-Film Agent is a Next.js App Router experience that combines the Vercel AI SDK with a retrieval pipeline over the MAFI audiovisual archive. The app streams chat completions, generates curated playlists, and stores conversations and artifacts in Postgres-backed tables.
+Film Agent is a is retrieval pipeline over the MAFI audiovisual archive. The app streams chat completions, generates curated playlists, and stores conversations and artifacts.
 
 ---
 
