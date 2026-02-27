@@ -10,7 +10,9 @@ import postgres from "postgres";
 import { generateShotEmbeddings } from "../lib/ai/mafi-embeddings";
 import { shotEmbeddings, shots } from "../lib/db/schema/shots";
 
+// Load env: prefer .env.local for local overrides, fall back to .env
 config({ path: ".env.local" });
+config();
 
 const connectionString =
   process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL;
@@ -23,6 +25,19 @@ if (!connectionString) {
 
 const dataDirectory = path.join(process.cwd(), "data", "mafi-shots");
 const shouldPrune = process.argv.includes("--prune");
+
+const throttleEnabled =
+  process.env.INGEST_THROTTLE_EMBEDDINGS === "1" ||
+  process.env.INGEST_THROTTLE_EMBEDDINGS === "true" ||
+  process.env.INGEST_THROTTLE_EMBEDDINGS === "yes";
+const throttleDelayMs = Number.parseInt(
+  process.env.INGEST_THROTTLE_DELAY_MS ?? "2000",
+  10
+);
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const sqlClient = postgres(connectionString, { max: 1 });
 const db = drizzle(sqlClient);
@@ -193,6 +208,12 @@ async function main() {
   const processedSlugs = new Set<string>();
   let embeddingsUpdated = 0;
 
+  if (throttleEnabled) {
+    console.log(
+      `⏱️  Throttling enabled: ${throttleDelayMs}ms delay between embedding calls`
+    );
+  }
+
   for (const file of files) {
     const slug = path.basename(file, path.extname(file));
     processedSlugs.add(slug);
@@ -200,6 +221,9 @@ async function main() {
     if (result.updatedEmbeddings) {
       embeddingsUpdated += 1;
       console.log(`✅ Updated embeddings for shot ${slug}`);
+      if (throttleEnabled && throttleDelayMs > 0) {
+        await sleep(throttleDelayMs);
+      }
     } else {
       console.log(`⚪️ Shot ${slug} is up to date`);
     }
