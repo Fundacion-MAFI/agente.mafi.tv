@@ -1,6 +1,10 @@
 <h1 align="center">Film Agent</h1>
 
-Film Agent is a is retrieval pipeline over the MAFI audiovisual archive. The app streams chat completions, generates curated playlists, and stores conversations and artifacts.
+Film Agent is a retrieval pipeline over the MAFI audiovisual archive. The app streams chat completions, generates curated playlists, and stores conversations and artifacts.
+
+## Attribution
+
+This project derives from code by **Ignacio Rojas**, who created the original Film Concierge / Agente Fílmico implementation. The project has since moved to new maintainers while preserving and extending his work. See [LICENSE.md](./LICENSE.md) for license terms.
 
 ---
 
