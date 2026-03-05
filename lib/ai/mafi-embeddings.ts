@@ -59,14 +59,19 @@ export function chunkShotText(
 }
 
 export async function generateShotEmbeddings(
-  text: string
+  text: string,
+  options?: { chunkSize?: number; chunkOverlap?: number }
 ): Promise<ShotEmbeddingChunk[]> {
   const trimmed = text.replace(/\r\n/g, "\n").trim();
   if (!trimmed) {
     return [];
   }
 
-  const chunks = chunkShotText(trimmed);
+  const chunkSize =
+    options?.chunkSize ?? DEFAULT_CHUNK_SIZE;
+  const chunkOverlap =
+    options?.chunkOverlap ?? DEFAULT_CHUNK_OVERLAP;
+  const chunks = chunkShotText(trimmed, chunkSize, chunkOverlap);
 
   if (chunks.length === 0) {
     return [];

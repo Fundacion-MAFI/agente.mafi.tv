@@ -25,9 +25,21 @@ export default async function AdminLayout({
           <nav className="flex gap-4">
             <Link
               className="text-muted-foreground text-sm hover:text-foreground"
+              href="/admin/settings"
+            >
+              Settings
+            </Link>
+            <Link
+              className="text-muted-foreground text-sm hover:text-foreground"
               href="/admin/shots"
             >
               Shots
+            </Link>
+            <Link
+              className="text-muted-foreground text-sm hover:text-foreground"
+              href="/admin/ingest"
+            >
+              Ingest
             </Link>
             <Link
               className="text-muted-foreground text-sm hover:text-foreground"

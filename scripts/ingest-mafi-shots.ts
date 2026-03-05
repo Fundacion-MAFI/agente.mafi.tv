@@ -26,14 +26,75 @@ if (!connectionString) {
 const dataDirectory = path.join(process.cwd(), "data", "mafi-shots");
 const shouldPrune = process.argv.includes("--prune");
 
-const throttleEnabled =
-  process.env.INGEST_THROTTLE_EMBEDDINGS === "1" ||
-  process.env.INGEST_THROTTLE_EMBEDDINGS === "true" ||
-  process.env.INGEST_THROTTLE_EMBEDDINGS === "yes";
-const throttleDelayMs = Number.parseInt(
-  process.env.INGEST_THROTTLE_DELAY_MS ?? "2000",
-  10
-);
+const INGEST_DEFAULTS = {
+  throttleEnabled: false,
+  throttleDelayMs: 2000,
+  chunkSize: 800,
+  chunkOverlap: 200,
+};
+
+async function getIngestConfig(
+  sql: ReturnType<typeof postgres>
+): Promise<typeof INGEST_DEFAULTS> {
+  try {
+    const rows = await sql`
+      SELECT key, value FROM admin_settings
+      WHERE key IN (
+        'ingest.throttle_enabled',
+        'ingest.throttle_delay_ms',
+        'embedding.chunk_size',
+        'embedding.chunk_overlap'
+      )
+    `;
+
+    const map = Object.fromEntries(
+      rows.map((r: { key: string; value: unknown }) => [r.key, r.value])
+    );
+
+    const throttle =
+      map["ingest.throttle_enabled"] === true ||
+      process.env.INGEST_THROTTLE_EMBEDDINGS === "1" ||
+      process.env.INGEST_THROTTLE_EMBEDDINGS === "true" ||
+      process.env.INGEST_THROTTLE_EMBEDDINGS === "yes";
+    const delay =
+      typeof map["ingest.throttle_delay_ms"] === "number" &&
+      map["ingest.throttle_delay_ms"] >= 0
+        ? (map["ingest.throttle_delay_ms"] as number)
+        : Number.parseInt(
+            process.env.INGEST_THROTTLE_DELAY_MS ?? "2000",
+            10
+          );
+    const chunk =
+      typeof map["embedding.chunk_size"] === "number" &&
+      map["embedding.chunk_size"] > 0
+        ? (map["embedding.chunk_size"] as number)
+        : 800;
+    const overlap =
+      typeof map["embedding.chunk_overlap"] === "number" &&
+      map["embedding.chunk_overlap"] >= 0
+        ? (map["embedding.chunk_overlap"] as number)
+        : 200;
+
+    return {
+      throttleEnabled: throttle,
+      throttleDelayMs: delay,
+      chunkSize: chunk,
+      chunkOverlap: overlap,
+    };
+  } catch {
+    return {
+      ...INGEST_DEFAULTS,
+      throttleEnabled:
+        process.env.INGEST_THROTTLE_EMBEDDINGS === "1" ||
+        process.env.INGEST_THROTTLE_EMBEDDINGS === "true" ||
+        process.env.INGEST_THROTTLE_EMBEDDINGS === "yes",
+      throttleDelayMs: Number.parseInt(
+        process.env.INGEST_THROTTLE_DELAY_MS ?? "2000",
+        10
+      ),
+    };
+  }
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -105,7 +166,10 @@ function normalizeTags(raw: ShotFrontMatter["tags"]): string[] {
     .filter(Boolean);
 }
 
-async function upsertShotFromFile(relativePath: string) {
+async function upsertShotFromFile(
+  relativePath: string,
+  embeddingOptions: { chunkSize: number; chunkOverlap: number }
+) {
   const fullPath = path.join(dataDirectory, relativePath);
   const fileContent = await fs.readFile(fullPath, "utf8");
   const checksum = sha256(fileContent);
@@ -165,7 +229,10 @@ async function upsertShotFromFile(relativePath: string) {
     .filter(Boolean)
     .join("\n\n");
 
-  const embeddingChunks = await generateShotEmbeddings(textToEmbed);
+  const embeddingChunks = await generateShotEmbeddings(textToEmbed, {
+    chunkSize: embeddingOptions.chunkSize,
+    chunkOverlap: embeddingOptions.chunkOverlap,
+  });
 
   await db.transaction(async (tx) => {
     await tx
@@ -206,26 +273,32 @@ async function pruneRemovedShots(processedSlugs: Set<string>) {
 
 async function main() {
   await ensureShotsSchema();
+
+  const ingestConfig = await getIngestConfig(sqlClient);
+
   console.log("📼 Ingesting MAFI shots from", dataDirectory);
   const files = await getMarkdownFiles();
   const processedSlugs = new Set<string>();
   let embeddingsUpdated = 0;
 
-  if (throttleEnabled) {
+  if (ingestConfig.throttleEnabled) {
     console.log(
-      `⏱️  Throttling enabled: ${throttleDelayMs}ms delay between embedding calls`
+      `⏱️  Throttling enabled: ${ingestConfig.throttleDelayMs}ms delay between embedding calls`
     );
   }
 
   for (const file of files) {
     const slug = path.basename(file, path.extname(file));
     processedSlugs.add(slug);
-    const result = await upsertShotFromFile(file);
+    const result = await upsertShotFromFile(file, {
+      chunkSize: ingestConfig.chunkSize,
+      chunkOverlap: ingestConfig.chunkOverlap,
+    });
     if (result.updatedEmbeddings) {
       embeddingsUpdated += 1;
       console.log(`✅ Updated embeddings for shot ${slug}`);
-      if (throttleEnabled && throttleDelayMs > 0) {
-        await sleep(throttleDelayMs);
+      if (ingestConfig.throttleEnabled && ingestConfig.throttleDelayMs > 0) {
+        await sleep(ingestConfig.throttleDelayMs);
       }
     } else {
       console.log(`⚪️ Shot ${slug} is up to date`);
