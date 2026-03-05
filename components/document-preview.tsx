@@ -238,7 +238,7 @@ const PureDocumentHeader = ({
   kind: ArtifactKind;
   isStreaming: boolean;
 }) => (
-  <div className="flex flex-row items-start justify-between gap-2 rounded-t-[var(--radius-input)] border-b border-border p-4 sm:items-center">
+  <div className="flex flex-row items-start justify-between gap-2 rounded-t-[var(--radius-input)] p-4 sm:items-center">
     <div className="flex flex-row items-start gap-3 sm:items-center">
       <div className="text-muted-foreground">
         {isStreaming ? (
@@ -276,7 +276,7 @@ const DocumentContent = ({ document }: { document: Document }) => {
     {
       "p-4 sm:px-14 sm:py-16": document.kind === "text",
       "p-0": document.kind === "code",
-      "p-4": document.kind === "mafi-playlist",
+      "p-2": document.kind === "mafi-playlist",
     }
   );
 
@@ -343,7 +343,7 @@ function ShotThumbnail({
   if (error) {
     return (
       <div
-        className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-border bg-muted text-muted-foreground text-xs"
+        className="flex min-w-0 flex-1 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-border bg-muted text-muted-foreground"
         title={title}
       >
         <FileIcon />
@@ -353,7 +353,7 @@ function ShotThumbnail({
 
   return (
     <div
-      className="relative size-16 shrink-0 overflow-hidden rounded-[var(--radius-sm)] border border-border bg-muted"
+      className="relative min-w-0 flex-1 overflow-hidden rounded-[var(--radius-sm)] border border-border bg-muted"
       title={title}
     >
       <Image
@@ -361,7 +361,7 @@ function ShotThumbnail({
         className="object-cover"
         fill
         onError={() => setError(true)}
-        sizes="64px"
+        sizes="(max-width: 768px) 50vw, 200px"
         src={thumbSrc}
         unoptimized
       />
@@ -395,24 +395,22 @@ function MafiPlaylistPreview({
   }
 
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
-      {parsed.question ? (
-        <p className="line-clamp-2 font-medium text-foreground text-sm">
-          {parsed.question}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        {parsed.playlist.slice(0, 6).map((entry, index) => {
-          const slug = entry.slug ?? String(index + 1);
-          return (
-            <ShotThumbnail
-              key={`${slug}-${index}`}
-              slug={slug}
-              title={entry.title}
-            />
-          );
-        })}
-      </div>
+    <div
+      className={cn(
+        "flex h-full w-full flex-row gap-2",
+        className
+      )}
+    >
+      {parsed.playlist.slice(0, 6).map((entry, index) => {
+        const slug = entry.slug ?? String(index + 1);
+        return (
+          <ShotThumbnail
+            key={`${slug}-${index}`}
+            slug={slug}
+            title={entry.title}
+          />
+        );
+      })}
     </div>
   );
 }
