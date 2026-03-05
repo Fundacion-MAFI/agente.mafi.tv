@@ -23,9 +23,9 @@ import { useAdminDirty } from "./admin-dirty-context";
 import { useAdminIngest } from "./admin-ingest-context";
 
 const NAV_LINKS = [
-  { href: "/admin/settings", label: "Settings" },
   { href: "/admin/shots", label: "Shots" },
   { href: "/admin/ingest", label: "Ingest" },
+  { href: "/admin/settings", label: "Settings" },
   { href: "/", label: "← Back to app" },
 ] as const;
 
