@@ -22,6 +22,23 @@ const getActionText = (
   }
 };
 
+const ACCENT_CARD_VARS = [
+  "var(--accent-card-1)",
+  "var(--accent-card-2)",
+  "var(--accent-card-3)",
+  "var(--accent-card-4)",
+  "var(--accent-card-5)",
+] as const;
+
+function getAccentIndexForId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash) % ACCENT_CARD_VARS.length;
+}
+
 type DocumentToolResultProps = {
   type: "create" | "update" | "request-suggestions";
   result: { id: string; title: string; kind: ArtifactKind };
@@ -34,10 +51,13 @@ function PureDocumentToolResult({
   isReadonly,
 }: DocumentToolResultProps) {
   const { setArtifact } = useArtifact();
+  const accentIndex = getAccentIndexForId(result.id);
+  const accentBg = ACCENT_CARD_VARS[accentIndex];
 
   return (
     <button
-      className="flex w-fit cursor-pointer flex-row items-start gap-3 rounded-xl border bg-background px-3 py-2"
+      className="flex w-fit cursor-pointer flex-row items-start gap-3 rounded-[var(--radius-input)] border border-border px-3 py-2"
+      style={{ backgroundColor: accentBg }}
       onClick={(event) => {
         if (isReadonly) {
           toast.error(
