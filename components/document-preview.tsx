@@ -272,7 +272,7 @@ const DocumentContent = ({ document }: { document: Document }) => {
   const { artifact } = useArtifact();
 
   const containerClassName = cn(
-    "h-[275px] overflow-y-scroll rounded-b-[var(--radius-input)]",
+    "h-[275px] overflow-x-hidden overflow-y-auto rounded-b-[var(--radius-input)]",
     {
       "p-4 sm:px-14 sm:py-16": document.kind === "text",
       "p-0": document.kind === "code",
