@@ -8,6 +8,19 @@ import { toast } from "@/components/toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+function extractVimeoId(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null;
+  try {
+    const normalized = url.startsWith("http") ? url : `https://${url}`;
+    const parsed = new URL(normalized);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    const id = segments.at(-1) ?? null;
+    return id && /^\d+$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 type ShotData = {
   slug: string;
   title: string;
@@ -134,6 +147,8 @@ export function ShotEditForm({
     }
   };
 
+  const vimeoId = extractVimeoId(form.vimeoUrl);
+
   return (
     <form className="max-w-2xl space-y-4" onSubmit={handleSubmit}>
       {error && (
@@ -143,19 +158,24 @@ export function ShotEditForm({
       )}
 
       <div className="grid gap-2">
-        <Label htmlFor="slug">Slug (filename)</Label>
+        <Label htmlFor="vimeoUrl">Vimeo URL</Label>
         <Input
-          disabled={!!slug}
-          id="slug"
-          onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-          placeholder="42"
-          required={!slug}
-          value={form.slug}
+          id="vimeoUrl"
+          onChange={(e) => setForm((f) => ({ ...f, vimeoUrl: e.target.value }))}
+          placeholder="https://vimeo.com/..."
+          type="url"
+          value={form.vimeoUrl}
         />
-        {slug && (
-          <p className="text-muted-foreground text-xs">
-            Slug cannot be changed after creation
-          </p>
+        {vimeoId && (
+          <div className="aspect-video overflow-hidden rounded-md border border-input bg-muted">
+            <iframe
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="h-full w-full"
+              src={`https://player.vimeo.com/video/${vimeoId}`}
+              title="Vimeo video player"
+            />
+          </div>
         )}
       </div>
 
@@ -195,17 +215,6 @@ export function ShotEditForm({
           placeholder="Historical or contextual background for this shot"
           rows={10}
           value={form.historicContext}
-        />
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="vimeoUrl">Vimeo URL</Label>
-        <Input
-          id="vimeoUrl"
-          onChange={(e) => setForm((f) => ({ ...f, vimeoUrl: e.target.value }))}
-          placeholder="https://vimeo.com/..."
-          type="url"
-          value={form.vimeoUrl}
         />
       </div>
 
@@ -249,6 +258,23 @@ export function ShotEditForm({
             value={form.geotag}
           />
         </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="slug">Slug (filename)</Label>
+        <Input
+          disabled={!!slug}
+          id="slug"
+          onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+          placeholder="42"
+          required={!slug}
+          value={form.slug}
+        />
+        {slug && (
+          <p className="text-muted-foreground text-xs">
+            Slug cannot be changed after creation
+          </p>
+        )}
       </div>
 
       <div className="grid gap-2">
