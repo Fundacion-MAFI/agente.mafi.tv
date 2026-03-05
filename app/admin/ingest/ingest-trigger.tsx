@@ -1,6 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +34,7 @@ export function IngestTrigger() {
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [status, setStatus] = useState<EmbeddingsStatusAll | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const outputRef = useRef<HTMLPreElement>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -47,16 +57,9 @@ export function IngestTrigger() {
     }
   }, [output]);
 
-  const handleIngest = async () => {
+  const runIngest = useCallback(async () => {
     if (running) return;
-    if (
-      !confirm(
-        "Run ingestion? This may take several minutes and will update embeddings for the selected model (see Settings)."
-      )
-    ) {
-      return;
-    }
-
+    setConfirmOpen(false);
     setRunning(true);
     setOutput("");
 
@@ -146,7 +149,7 @@ export function IngestTrigger() {
     } finally {
       setRunning(false);
     }
-  };
+  }, [running, fetchStatus]);
 
   return (
     <div className="space-y-6">
@@ -207,10 +210,36 @@ export function IngestTrigger() {
           </a>
           . Run ingestion to populate embeddings for that model.
         </p>
-        <Button disabled={running} onClick={handleIngest} type="button">
+        <Button
+          disabled={running}
+          onClick={() => setConfirmOpen(true)}
+          type="button"
+        >
           {running ? "Running…" : "Run ingestion"}
         </Button>
       </div>
+
+      <AlertDialog onOpenChange={setConfirmOpen} open={confirmOpen}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Run ingestion?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This may take several minutes and will update embeddings for the
+              selected model (see Settings).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              disabled={running}
+              onClick={() => runIngest()}
+              type="button"
+            >
+              Run ingestion
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {(running || output) && (
         <pre

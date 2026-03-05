@@ -1,6 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,15 +154,11 @@ export function SettingsForm() {
     }
   }, [loading, embeddingModel, fetchEmbeddingsStatus]);
 
-  const handleRunIngest = useCallback(async () => {
+  const [ingestConfirmOpen, setIngestConfirmOpen] = useState(false);
+
+  const runIngest = useCallback(async () => {
     if (ingestRunning) return;
-    if (
-      !confirm(
-        "Run ingestion? This may take several minutes and will update embeddings for the selected model."
-      )
-    ) {
-      return;
-    }
+    setIngestConfirmOpen(false);
     setIngestRunning(true);
     try {
       const res = await fetch("/api/admin/ingest", {
@@ -344,13 +349,37 @@ export function SettingsForm() {
           )}
           <Button
             disabled={ingestRunning}
-            onClick={handleRunIngest}
+            onClick={() => setIngestConfirmOpen(true)}
             type="button"
             variant="outline"
           >
             {ingestRunning ? "Running…" : "Run ingestion"}
           </Button>
         </div>
+        <AlertDialog
+          onOpenChange={setIngestConfirmOpen}
+          open={ingestConfirmOpen}
+        >
+          <AlertDialogContent className="max-w-sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Run ingestion?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This may take several minutes and will update embeddings for the
+                selected model.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <Button
+                disabled={ingestRunning}
+                onClick={() => runIngest()}
+                type="button"
+              >
+                Run ingestion
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="embedding.model">Retrieval model</Label>
