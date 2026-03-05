@@ -348,24 +348,22 @@ export async function runMafiIngest(
       pruned
     );
 
-    if (embeddingsUpdated > 0) {
-      await db
-        .insert(embeddingModelMetadata)
-        .values({
-          modelId: embeddingModel,
+    await db
+      .insert(embeddingModelMetadata)
+      .values({
+        modelId: embeddingModel,
+        chunkSize: chunkSize,
+        chunkOverlap: chunkOverlap,
+        embeddedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: embeddingModelMetadata.modelId,
+        set: {
           chunkSize: chunkSize,
           chunkOverlap: chunkOverlap,
           embeddedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-          target: embeddingModelMetadata.modelId,
-          set: {
-            chunkSize: chunkSize,
-            chunkOverlap: chunkOverlap,
-            embeddedAt: new Date(),
-          },
-        });
-    }
+        },
+      });
 
     await sqlClient.end();
 
