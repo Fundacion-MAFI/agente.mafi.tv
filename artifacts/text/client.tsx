@@ -151,7 +151,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       onClick: ({ sendMessage }) => {
         sendMessage({
           role: "user",
-          mode: "default",
+          mode: "archivo",
           parts: [
             {
               type: "text",
@@ -167,7 +167,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       onClick: ({ sendMessage }) => {
         sendMessage({
           role: "user",
-          mode: "default",
+          mode: "archivo",
           parts: [
             {
               type: "text",
