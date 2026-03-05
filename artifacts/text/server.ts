@@ -1,5 +1,5 @@
 import { smoothStream, streamText } from "ai";
-import { updateDocumentPrompt } from "@/lib/ai/prompts";
+import { getUpdateDocumentPrompt } from "@/lib/ai/get-prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
@@ -37,6 +37,7 @@ export const textDocumentHandler = createDocumentHandler<"text">({
   onUpdateDocument: async ({ document, description, dataStream }) => {
     let draftContent = "";
 
+    const updateDocumentPrompt = await getUpdateDocumentPrompt();
     const { fullStream } = streamText({
       model: myProvider.languageModel("artifact-model"),
       system: updateDocumentPrompt(document.content, "text"),

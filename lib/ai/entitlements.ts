@@ -1,29 +1,52 @@
+import "server-only";
+
 import type { UserType } from "@/app/(auth)/auth";
+import { getAdminSetting } from "@/lib/db/admin-settings";
 import type { ChatModel } from "./models";
 
-type Entitlements = {
+export type Entitlements = {
   maxMessagesPerDay: number;
   availableChatModelIds: ChatModel["id"][];
 };
 
-export const entitlementsByUserType: Record<UserType, Entitlements> = {
-  /*
-   * For users without an account
-   */
+const DEFAULT_ENTITLEMENTS: Record<UserType, Entitlements> = {
   guest: {
     maxMessagesPerDay: 20,
     availableChatModelIds: ["chat-model", "film-agent"],
   },
-
-  /*
-   * For users with an account
-   */
   regular: {
     maxMessagesPerDay: 100,
     availableChatModelIds: ["chat-model", "film-agent"],
   },
-
-  /*
-   * TODO: For users with an account and a paid membership
-   */
 };
+
+export const entitlementsByUserType = DEFAULT_ENTITLEMENTS;
+
+export async function getEntitlementsForUserType(
+  userType: UserType
+): Promise<Entitlements> {
+  const defaultEntitlements = DEFAULT_ENTITLEMENTS[userType];
+  if (!defaultEntitlements) {
+    return DEFAULT_ENTITLEMENTS.regular;
+  }
+
+  const [maxMessagesPerDay, availableChatModelIds] = await Promise.all([
+    getAdminSetting(
+      `entitlements.${userType}.max_messages_per_day` as "entitlements.guest.max_messages_per_day"
+    ),
+    getAdminSetting(
+      `entitlements.${userType}.available_chat_model_ids` as "entitlements.guest.available_chat_model_ids"
+    ),
+  ]);
+
+  return {
+    maxMessagesPerDay:
+      typeof maxMessagesPerDay === "number" && maxMessagesPerDay >= 0
+        ? maxMessagesPerDay
+        : defaultEntitlements.maxMessagesPerDay,
+    availableChatModelIds:
+      Array.isArray(availableChatModelIds) && availableChatModelIds.length > 0
+        ? availableChatModelIds
+        : defaultEntitlements.availableChatModelIds,
+  };
+}

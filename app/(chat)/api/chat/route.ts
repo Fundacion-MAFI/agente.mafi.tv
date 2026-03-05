@@ -20,7 +20,8 @@ import { fetchModels } from "tokenlens/fetch";
 import { getUsage } from "tokenlens/helpers";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import type { VisibilityType } from "@/components/visibility-selector";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
+import { getEntitlementsForUserType } from "@/lib/ai/entitlements";
+import { getAgenteFilmicoPrompt, getSystemPrompt } from "@/lib/ai/get-prompts";
 import {
   ArchivoTimeoutError,
   type RetrievedShot,
@@ -28,11 +29,7 @@ import {
 } from "@/lib/ai/mafi-retrieval";
 import { type MafiAnswer, mafiAnswerSchema } from "@/lib/ai/mafi-schema";
 import type { ChatModel } from "@/lib/ai/models";
-import {
-  AGENTE_FILMICO_SYSTEM_PROMPT,
-  type RequestHints,
-  systemPrompt,
-} from "@/lib/ai/prompts";
+import type { RequestHints } from "@/lib/ai/prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -43,6 +40,7 @@ import {
   isProductionEnvironment,
   STREAM_TROUBLESHOOTING_MESSAGE,
 } from "@/lib/constants";
+import { getAdminSetting } from "@/lib/db/admin-settings";
 import {
   createStreamId,
   deleteChatById,
@@ -69,8 +67,6 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-const ARCHIVO_RETRIEVAL_TIMEOUT_MS = 12_000;
-const ARCHIVO_PLAYLIST_TIMEOUT_MS = 28_000;
 const ARCHIVO_OFFLINE_MESSAGE =
   "El modo Archivo está temporalmente fuera de línea. Verifica la configuración del AI Gateway y vuelve a intentarlo.";
 
@@ -501,7 +497,8 @@ export async function POST(request: Request) {
       differenceInHours: 24,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+    const entitlements = await getEntitlementsForUserType(userType);
+    if (messageCount > entitlements.maxMessagesPerDay) {
       return new ChatSDKError("rate_limit:chat").toResponse();
     }
 
@@ -557,6 +554,33 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    const [
+      archivoPrompt,
+      systemPromptStr,
+      retrievalTimeoutMs,
+      playlistTimeoutMs,
+      retrievalLimit,
+      stepCount,
+    ] = await Promise.all([
+      getAgenteFilmicoPrompt(),
+      getSystemPrompt(requestHints),
+      getAdminSetting("chat.archivo_retrieval_timeout_ms"),
+      getAdminSetting("chat.archivo_playlist_timeout_ms"),
+      getAdminSetting("retrieval.k"),
+      getAdminSetting("chat.step_count"),
+    ]);
+
+    const archivoRetrievalTimeoutMs =
+      typeof retrievalTimeoutMs === "number" ? retrievalTimeoutMs : 12_000;
+    const archivoPlaylistTimeoutMs =
+      typeof playlistTimeoutMs === "number" ? playlistTimeoutMs : 28_000;
+    const stepCountLimit =
+      typeof stepCount === "number" && stepCount >= 1 ? stepCount : 5;
+    const archivoRetrievalLimit =
+      typeof retrievalLimit === "number" && retrievalLimit >= 1
+        ? retrievalLimit
+        : 24;
+
     let finalMergedUsage: AppUsage | undefined;
 
     const isArchivoMode = message.mode === "archivo";
@@ -599,8 +623,9 @@ export async function POST(request: Request) {
 
       try {
         retrievedShots = await retrieveRelevantShots(questionText, {
+          limit: archivoRetrievalLimit,
           signal: retrievalAbortSignal,
-          timeoutMs: ARCHIVO_RETRIEVAL_TIMEOUT_MS,
+          timeoutMs: archivoRetrievalTimeoutMs,
         });
       } catch (error) {
         if (error instanceof ArchivoTimeoutError || isAbortSignalError(error)) {
@@ -626,7 +651,7 @@ export async function POST(request: Request) {
         const archiveModel = myProvider.languageModel(archivoModelId);
         const objectResult = streamObject({
           model: archiveModel,
-          system: AGENTE_FILMICO_SYSTEM_PROMPT,
+          system: archivoPrompt,
           prompt: retrievalContext,
           schema: mafiAnswerSchema,
           abortSignal: playlistAbortSignal,
@@ -645,7 +670,7 @@ export async function POST(request: Request) {
 
         const answer = await raceWithTimeout({
           promise: objectResult.object,
-          timeoutMs: ARCHIVO_PLAYLIST_TIMEOUT_MS,
+          timeoutMs: archivoPlaylistTimeoutMs,
           context: "generating Archivo playlist",
           onTimeout: (timeoutError) =>
             playlistAbortController.abort(timeoutError),
@@ -654,7 +679,7 @@ export async function POST(request: Request) {
           promise: objectResult.usage.catch(() => {
             // ignore
           }),
-          timeoutMs: ARCHIVO_PLAYLIST_TIMEOUT_MS,
+          timeoutMs: archivoPlaylistTimeoutMs,
           context: "collecting Archivo usage metrics",
           onTimeout: (timeoutError) =>
             playlistAbortController.abort(timeoutError),
@@ -766,9 +791,9 @@ export async function POST(request: Request) {
 
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPromptStr,
           messages: convertToModelMessages(uiMessages),
-          stopWhen: stepCountIs(5),
+          stopWhen: stepCountIs(stepCountLimit),
           experimental_activeTools: [
             "getWeather",
             "createDocument",

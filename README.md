@@ -1,6 +1,10 @@
 <h1 align="center">Film Agent</h1>
 
-Film Agent is a is retrieval pipeline over the MAFI audiovisual archive. The app streams chat completions, generates curated playlists, and stores conversations and artifacts.
+Film Agent is a retrieval pipeline over the MAFI audiovisual archive. The app streams chat completions, generates curated playlists, and stores conversations and artifacts.
+
+## Attribution
+
+This project derives from code by **Ignacio Rojas**, who created the original Film Concierge / Agente Fílmico implementation. The project has since moved to new maintainers while preserving and extending his work. See [LICENSE.md](./LICENSE.md) for license terms.
 
 ---
 
@@ -241,6 +245,8 @@ http://localhost:3000
 
 ---
 
+d
+
 ## Archive Ingestion Workflow
 
 The MAFI archive in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script:
@@ -267,3 +273,22 @@ To remove database records for files that no longer exist locally, pass the `--p
 ```bash
 pnpm ingest:mafi -- --prune
 ```
+
+---
+
+## Admin Panel
+
+The admin panel at `/admin` lets you manage MAFI shots with dual-write to the database and Git.
+
+### Setup
+
+1. **Admin access** — Add your email to `ADMIN_EMAILS` (comma-separated) in `.env`.
+2. **GitHub sync** — Set `GITHUB_TOKEN` (repo scope) and `GITHUB_REPO` (e.g. `owner/repo`) so edits are committed to `data/mafi-shots/`.
+3. **Branch** (optional) — Set `GITHUB_BRANCH` to target a specific branch. Omitted = repo default. Use `dev` in `.env.local` and `main` in production.
+4. **API key** (optional) — Set `ADMIN_API_KEY` for script/automation access. Use header `Authorization: Bearer <key>` or `X-Admin-API-Key`.
+
+### Features
+
+- List, create, edit, and delete shots
+- Edits update Neon DB and sync to the repo via GitHub API
+- Embeddings are recomputed on create/update

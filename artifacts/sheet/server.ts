@@ -1,6 +1,6 @@
 import { streamObject } from "ai";
 import { z } from "zod";
-import { sheetPrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
+import { getSheetPrompt, getUpdateDocumentPrompt } from "@/lib/ai/get-prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
@@ -9,6 +9,7 @@ export const sheetDocumentHandler = createDocumentHandler<"sheet">({
   onCreateDocument: async ({ title, dataStream }) => {
     let draftContent = "";
 
+    const sheetPrompt = await getSheetPrompt();
     const { fullStream } = streamObject({
       model: myProvider.languageModel("artifact-model"),
       system: sheetPrompt,
@@ -48,6 +49,7 @@ export const sheetDocumentHandler = createDocumentHandler<"sheet">({
   onUpdateDocument: async ({ document, description, dataStream }) => {
     let draftContent = "";
 
+    const updateDocumentPrompt = await getUpdateDocumentPrompt();
     const { fullStream } = streamObject({
       model: myProvider.languageModel("artifact-model"),
       system: updateDocumentPrompt(document.content, "sheet"),

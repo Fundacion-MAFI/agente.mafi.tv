@@ -1,6 +1,6 @@
 import { streamObject } from "ai";
 import { z } from "zod";
-import { codePrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
+import { getCodePrompt, getUpdateDocumentPrompt } from "@/lib/ai/get-prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
@@ -9,6 +9,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
   onCreateDocument: async ({ title, dataStream }) => {
     let draftContent = "";
 
+    const codePrompt = await getCodePrompt();
     const { fullStream } = streamObject({
       model: myProvider.languageModel("artifact-model"),
       system: codePrompt,
@@ -42,6 +43,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
   onUpdateDocument: async ({ document, description, dataStream }) => {
     let draftContent = "";
 
+    const updateDocumentPrompt = await getUpdateDocumentPrompt();
     const { fullStream } = streamObject({
       model: myProvider.languageModel("artifact-model"),
       system: updateDocumentPrompt(document.content, "code"),

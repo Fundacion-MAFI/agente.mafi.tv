@@ -1,9 +1,16 @@
 import "server-only";
 
-import { gateway } from "@ai-sdk/gateway";
 import { embedMany } from "ai";
 import postgres from "postgres";
 
+import {
+  DEFAULT_EMBEDDING_MODEL,
+  type EmbeddingModelId,
+  getEmbeddingDimensions,
+  getEmbeddingModel,
+  isEmbeddingModelId,
+} from "@/lib/ai/embedding-models";
+import { getAdminSetting } from "@/lib/db/admin-settings";
 import type { Shot } from "@/lib/db/schema";
 
 export type RetrievedShot = Shot & {
@@ -16,9 +23,14 @@ const MAX_RESULT_LIMIT = 50;
 const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
 const CACHE_TTL_MS = 5 * 60_000;
 const CACHE_MAX_ENTRIES = 128;
-const embeddingModel = gateway.textEmbeddingModel(
-  "openai/text-embedding-3-small"
-);
+
+const EMBEDDING_TABLE_NAMES = [
+  "shot_embeddings_768",
+  "shot_embeddings_1024",
+  "shot_embeddings_1536",
+  "shot_embeddings_2560",
+  "shot_embeddings_3072",
+] as const;
 
 let sqlClient: ReturnType<typeof postgres> | null = null;
 
@@ -84,6 +96,7 @@ type RetrievedShotRow = {
   slug: string;
   title: string;
   description: string | null;
+  historicContext: string | null;
   vimeoUrl: string | null;
   date: string | null;
   place: string | null;
@@ -186,6 +199,14 @@ function withTimeout<T>(
   });
 }
 
+async function getActiveEmbeddingModel(): Promise<EmbeddingModelId> {
+  const raw = await getAdminSetting("embedding.model");
+  if (typeof raw === "string" && isEmbeddingModelId(raw)) {
+    return raw;
+  }
+  return DEFAULT_EMBEDDING_MODEL;
+}
+
 export async function retrieveRelevantShots(
   query: string,
   {
@@ -199,19 +220,33 @@ export async function retrieveRelevantShots(
     return [];
   }
 
+  const modelId = await getActiveEmbeddingModel();
+  const dimensions = getEmbeddingDimensions(modelId);
+  const tableName = `shot_embeddings_${dimensions}`;
+
+  if (
+    !EMBEDDING_TABLE_NAMES.includes(
+      tableName as (typeof EMBEDDING_TABLE_NAMES)[number]
+    )
+  ) {
+    return [];
+  }
+
   const safeLimit = Math.max(1, Math.min(limit, MAX_RESULT_LIMIT));
-  const retrievalCacheKey = `${safeLimit}:${normalizedQuery}`;
+  const retrievalCacheKey = `${modelId}:${safeLimit}:${normalizedQuery}`;
   const cachedShots = getCachedValue(retrievalCache, retrievalCacheKey);
   if (cachedShots) {
     return cachedShots.map((shot) => ({ ...shot }));
   }
 
-  const cachedEmbedding = getCachedValue(embeddingCache, normalizedQuery);
+  const embeddingCacheKey = `${modelId}:${normalizedQuery}`;
+  const cachedEmbedding = getCachedValue(embeddingCache, embeddingCacheKey);
+  const model = getEmbeddingModel(modelId);
   const embeddingResult = cachedEmbedding
     ? null
     : await withTimeout(
         embedMany({
-          model: embeddingModel,
+          model,
           values: [normalizedQuery],
           abortSignal: signal,
         }),
@@ -230,34 +265,41 @@ export async function retrieveRelevantShots(
   }
 
   if (!cachedEmbedding) {
-    setCachedValue(embeddingCache, normalizedQuery, queryEmbedding);
+    setCachedValue(embeddingCache, embeddingCacheKey, queryEmbedding);
   }
 
   const vectorLiteral = buildVectorLiteral(queryEmbedding);
   const sql = getSqlClient();
+
+  const sqlQuery = `SELECT
+    s.id,
+    s.slug,
+    s.title,
+    s.description,
+    s.historic_context AS "historicContext",
+    s.vimeo_url AS "vimeoUrl",
+    s.date,
+    s.place,
+    s.author,
+    s.geotag,
+    s.tags,
+    s.checksum,
+    s.created_at AS "createdAt",
+    s.updated_at AS "updatedAt",
+    se.content AS "chunkContent",
+    1 - (se.embedding <=> $1::vector) AS "similarity"
+  FROM ${tableName} se
+  JOIN shots s ON s.id = se.shot_id
+  WHERE se.model_id = $2
+  ORDER BY se.embedding <=> $1::vector
+  LIMIT $3`;
+
   const rows = await withTimeout(
-    sql<RetrievedShotRow[]>`
-      SELECT
-        s.id,
-        s.slug,
-        s.title,
-        s.description,
-        s.vimeo_url AS "vimeoUrl",
-        s.date,
-        s.place,
-        s.author,
-        s.geotag,
-        s.tags,
-        s.checksum,
-        s.created_at AS "createdAt",
-        s.updated_at AS "updatedAt",
-        se.content AS "chunkContent",
-        1 - (se.embedding <=> ${vectorLiteral}::vector) AS "similarity"
-      FROM shot_embeddings se
-      JOIN shots s ON s.id = se.shot_id
-      ORDER BY se.embedding <=> ${vectorLiteral}::vector
-      LIMIT ${safeLimit}
-    `,
+    sql.unsafe<RetrievedShotRow[]>(sqlQuery, [
+      vectorLiteral,
+      modelId,
+      safeLimit,
+    ]),
     {
       context: "querying Archivo vectors",
       timeoutMs,

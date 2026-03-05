@@ -175,4 +175,6 @@ export const stream = pgTable(
 export type Stream = InferSelectModel<typeof stream>;
 
 // biome-ignore lint/performance/noBarrelFile: schema aggregation
+export * from "./schema/admin-settings";
+export * from "./schema/embedding-metadata";
 export * from "./schema/shots";
