@@ -48,7 +48,10 @@ async function getIngestConfig(
     `;
 
     const map = Object.fromEntries(
-      rows.map((r: { key: string; value: unknown }) => [r.key, r.value])
+      (rows as unknown as { key: string; value: unknown }[]).map((r) => [
+        r.key,
+        r.value,
+      ])
     );
 
     const throttle =

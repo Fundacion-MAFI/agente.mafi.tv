@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/toast";
+import { useAdminDirty } from "../admin-dirty-context";
 
 type AdminSettingsMap = Record<
   string,
@@ -32,12 +33,35 @@ const PROMPT_LABELS: Record<(typeof PROMPT_KEYS)[number], string> = {
     "Document update (use {mediaType} and {currentContent} as placeholders)",
 };
 
+function shallowEqual(a: AdminSettingsMap, b: AdminSettingsMap): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    const va = a[key];
+    const vb = b[key];
+    if (Array.isArray(va) && Array.isArray(vb)) {
+      if (
+        va.length !== vb.length ||
+        va.some((v, i) => v !== vb[i])
+      ) {
+        return false;
+      }
+    } else if (va !== vb) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function SettingsForm() {
+  const dirtyContext = useAdminDirty();
   const [settings, setSettings] = useState<AdminSettingsMap | null>(null);
+  const [initialSettings, setInitialSettings] =
+    useState<AdminSettingsMap | null>(null);
   const [defaults, setDefaults] = useState<AdminSettingsMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const saveHandlerRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -46,12 +70,48 @@ export function SettingsForm() {
         return res.json();
       })
       .then((data) => {
-        setSettings(data.settings ?? {});
+        const s = data.settings ?? {};
+        setSettings(s);
+        setInitialSettings(s);
         setDefaults(data.defaults ?? {});
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed"))
       .finally(() => setLoading(false));
   }, []);
+
+  const isDirty =
+    settings !== null &&
+    initialSettings !== null &&
+    !shallowEqual(settings, initialSettings);
+
+  const setDirty = dirtyContext?.setDirty;
+  useEffect(() => {
+    setDirty?.(isDirty);
+  }, [isDirty, setDirty]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  useEffect(() => {
+    saveHandlerRef.current = handleSave;
+  });
+
+  const registerSaveHandler = dirtyContext?.registerSaveHandler;
+  const unregisterSaveHandler = dirtyContext?.unregisterSaveHandler;
+  const clearDirty = dirtyContext?.setDirty;
+  useEffect(() => {
+    registerSaveHandler?.(() => saveHandlerRef.current());
+    return () => {
+      unregisterSaveHandler?.();
+      clearDirty?.(false);
+    };
+  }, [registerSaveHandler, unregisterSaveHandler, clearDirty]);
 
   const updateLocal = (key: string, value: string | number | boolean) => {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : null));
@@ -65,7 +125,7 @@ export function SettingsForm() {
     setSettings((prev) => (prev ? { ...prev, [key]: arr } : null));
   };
 
-  const handleSave = async () => {
+  async function handleSave() {
     if (!settings) return;
     setSaving(true);
     setError(null);
@@ -77,13 +137,15 @@ export function SettingsForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to save");
+      setInitialSettings(settings);
       toast({ type: "success", description: "Settings saved" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
+      throw err;
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   const resetPrompt = (key: string) => {
     const def = defaults?.[key];
