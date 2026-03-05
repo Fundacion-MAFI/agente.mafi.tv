@@ -49,13 +49,15 @@ export async function syncShotToGitHub(
 ): Promise<SyncResult> {
   const token = process.env.GITHUB_TOKEN?.trim();
   const repo = process.env.GITHUB_REPO?.trim();
+  const branch = process.env.GITHUB_BRANCH?.trim();
 
   if (!token || !repo) {
     return { ok: false, error: "GITHUB_TOKEN and GITHUB_REPO must be set" };
   }
 
   const filePath = `${SHOTS_PATH}/${shot.slug}.md`;
-  const url = `${GITHUB_API}/repos/${repo}/contents/${filePath}`;
+  const baseUrl = `${GITHUB_API}/repos/${repo}/contents/${filePath}`;
+  const url = branch ? `${baseUrl}?ref=${branch}` : baseUrl;
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
@@ -78,13 +80,17 @@ export async function syncShotToGitHub(
         };
       }
       const { sha } = (await getRes.json()) as { sha: string };
+      const deleteBody: { message: string; sha: string; branch?: string } = {
+        message: `Admin: delete shot ${shot.slug}`,
+        sha,
+      };
+      if (branch) {
+        deleteBody.branch = branch;
+      }
       const deleteRes = await fetch(url, {
         method: "DELETE",
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: `Admin: delete shot ${shot.slug}`,
-          sha,
-        }),
+        body: JSON.stringify(deleteBody),
       });
       if (!deleteRes.ok) {
         const err = await deleteRes.json().catch(() => ({}));
@@ -105,12 +111,20 @@ export async function syncShotToGitHub(
       }
 
       const content = buildMarkdown(shot);
-      const body: { message: string; content: string; sha?: string } = {
+      const body: {
+        message: string;
+        content: string;
+        sha?: string;
+        branch?: string;
+      } = {
         message: `Admin: ${operation} shot ${shot.slug}`,
         content: Buffer.from(content, "utf8").toString("base64"),
       };
       if (sha) {
         body.sha = sha;
+      }
+      if (branch) {
+        body.branch = branch;
       }
 
       const putRes = await fetch(url, {
