@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 import {
   CheckCircleFillIcon,
   ChevronDownIcon,
-  GlobeIcon,
   LockIcon,
+  ShareIcon,
 } from "./icons";
 
 export type VisibilityType = "private" | "public";
@@ -35,7 +35,7 @@ const visibilities: Array<{
     id: "public",
     label: "Public",
     description: "Anyone with the link can access this chat",
-    icon: <GlobeIcon />,
+    icon: <ShareIcon />,
   },
 ];
 
