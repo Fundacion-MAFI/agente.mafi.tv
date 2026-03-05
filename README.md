@@ -273,3 +273,21 @@ To remove database records for files that no longer exist locally, pass the `--p
 ```bash
 pnpm ingest:mafi -- --prune
 ```
+
+---
+
+## Admin Panel
+
+The admin panel at `/admin` lets you manage MAFI shots with dual-write to the database and Git.
+
+### Setup
+
+1. **Admin access** — Add your email to `ADMIN_EMAILS` (comma-separated) in `.env`.
+2. **GitHub sync** — Set `GITHUB_TOKEN` (repo scope) and `GITHUB_REPO` (e.g. `owner/repo`) so edits are committed to `data/mafi-shots/`.
+3. **API key** (optional) — Set `ADMIN_API_KEY` for script/automation access. Use header `Authorization: Bearer <key>` or `X-Admin-API-Key`.
+
+### Features
+
+- List, create, edit, and delete shots
+- Edits update Neon DB and sync to the repo via GitHub API
+- Embeddings are recomputed on create/update

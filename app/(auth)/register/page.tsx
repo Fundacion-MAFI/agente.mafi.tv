@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
@@ -23,6 +23,7 @@ export default function Page() {
   );
 
   const { update: updateSession } = useSession();
+  const successHandled = useRef(false);
 
   useEffect(() => {
     if (state.status === "user_exists") {
@@ -34,15 +35,15 @@ export default function Page() {
         type: "error",
         description: "Error al validar tu envío!",
       });
-    } else if (state.status === "success") {
-      toast({ type: "success", description: "¡Cuenta creada con éxito!" });
-
+    } else if (state.status === "success" && !successHandled.current) {
+      successHandled.current = true;
       setIsSuccessful(true);
-      updateSession();
-      router.refresh();
+      toast({ type: "success", description: "¡Cuenta creada con éxito!" });
+      updateSession().then(() => {
+        router.push("/");
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status, router.refresh, updateSession]);
+  }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get("email") as string);
