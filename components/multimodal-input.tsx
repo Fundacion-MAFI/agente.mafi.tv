@@ -26,7 +26,7 @@ import {
   PromptInputToolbar,
   PromptInputTools,
 } from "./elements/prompt-input";
-import { ArrowUpIcon, StopIcon } from "./icons";
+import { StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
@@ -210,17 +210,17 @@ function PureMultimodalInput({
           <Context {...contextProps} />
         </div>
         <PromptInputToolbar className="!border-top-0 border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
-          <PromptInputTools className="ml-auto gap-1 sm:gap-1.5">
+          <PromptInputTools className="w-full gap-1 sm:gap-1.5">
             {status === "submitted" ? (
               <StopButton setMessages={setMessages} stop={stop} />
             ) : (
               <PromptInputSubmit
-              className="size-8 rounded-[var(--radius-button)] bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
-              data-testid="send-button"
-              disabled={!input.trim()}
-              status={status}
+                className="h-11 w-full rounded-[var(--radius-button)] bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+                data-testid="send-button"
+                disabled={!input.trim()}
+                status={status}
               >
-                <ArrowUpIcon size={14} />
+                Preguntar al Agente
               </PromptInputSubmit>
             )}
           </PromptInputTools>
@@ -259,8 +259,9 @@ function PureStopButton({
 }) {
   return (
     <Button
-      className="size-7 rounded-[var(--radius-button)] bg-foreground p-1 text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
+      className="h-11 w-full rounded-[var(--radius-button)] bg-foreground text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
       data-testid="stop-button"
+      type="button"
       onClick={(event) => {
         event.preventDefault();
         stop();
@@ -268,6 +269,7 @@ function PureStopButton({
       }}
     >
       <StopIcon size={14} />
+      <span className="ml-2">Detener</span>
     </Button>
   );
 }
