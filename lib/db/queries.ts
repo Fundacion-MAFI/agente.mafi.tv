@@ -99,8 +99,12 @@ export async function saveChat({
       title,
       visibility,
     });
-  } catch (_error) {
-    throw new ChatSDKError("bad_request:database", "Failed to save chat");
+  } catch (error) {
+    console.error("saveChat failed", { error, id, userId });
+    throw new ChatSDKError(
+      "bad_request:database",
+      error instanceof Error ? error.message : "Failed to save chat"
+    );
   }
 }
 
