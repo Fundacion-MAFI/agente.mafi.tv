@@ -63,7 +63,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       <Sidebar className="group-data-[side=left]:border-r-0">
         <SidebarHeader>
           <SidebarMenu>
-            <div className="flex flex-row items-center justify-between">
+            <div className="relative flex flex-row items-center justify-center">
               <Link
                 className="flex flex-row items-center gap-3"
                 href="/"
@@ -77,10 +77,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   height={48}
                   priority
                   src="/images/agente-mafi-logo.png"
+                  unoptimized
                   width={160}
                 />
               </Link>
-              <div className="flex flex-row gap-1">
+              <div className="absolute top-1/2 right-0 flex -translate-y-1/2 flex-row gap-1">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
