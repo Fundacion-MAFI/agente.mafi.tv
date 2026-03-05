@@ -84,6 +84,7 @@ type RetrievedShotRow = {
   slug: string;
   title: string;
   description: string | null;
+  historicContext: string | null;
   vimeoUrl: string | null;
   date: string | null;
   place: string | null;
@@ -242,6 +243,7 @@ export async function retrieveRelevantShots(
         s.slug,
         s.title,
         s.description,
+        s.historic_context AS "historicContext",
         s.vimeo_url AS "vimeoUrl",
         s.date,
         s.place,

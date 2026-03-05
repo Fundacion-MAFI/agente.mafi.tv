@@ -20,6 +20,7 @@ export const shots = pgTable(
     slug: varchar("slug", { length: 128 }).notNull(),
     title: text("title").notNull(),
     description: text("description"),
+    historicContext: text("historic_context"),
     vimeoUrl: text("vimeo_url"),
     date: text("date"),
     place: text("place"),

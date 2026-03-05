@@ -19,6 +19,7 @@ function sha256(content: string): string {
 function buildTextToEmbed(shot: {
   title: string;
   description: string | null;
+  historicContext: string | null;
   place: string | null;
   author: string | null;
   date: string | null;
@@ -28,6 +29,7 @@ function buildTextToEmbed(shot: {
   return [
     shot.title,
     shot.description,
+    shot.historicContext,
     shot.place,
     shot.author,
     shot.date,
@@ -74,6 +76,7 @@ export async function upsertShotWithEmbeddings(
     slug: data.slug,
     title: data.title,
     description: data.description ?? null,
+    historicContext: data.historicContext ?? null,
     vimeoUrl: data.vimeoUrl ?? null,
     date: data.date ?? null,
     place: data.place ?? null,
@@ -128,6 +131,7 @@ export async function deleteShotBySlug(slug: string): Promise<Shot | null> {
 function buildMarkdownFromShot(shot: {
   title: string;
   description?: string | null;
+  historicContext?: string | null;
   vimeoUrl?: string | null;
   date?: string | null;
   place?: string | null;
@@ -144,6 +148,7 @@ function buildMarkdownFromShot(shot: {
     place: shot.place ?? undefined,
     author: shot.author ?? undefined,
     description: shot.description ?? undefined,
+    historic_context: shot.historicContext ?? undefined,
     tags: tags.length > 0 ? tags : undefined,
   };
 

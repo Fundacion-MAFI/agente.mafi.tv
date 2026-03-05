@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     slug: string;
     title: string;
     description?: string | null;
+    historicContext?: string | null;
     vimeoUrl?: string | null;
     date?: string | null;
     place?: string | null;
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
       slug: slugSafe,
       title: title.trim(),
       description: body.description ?? null,
+      historicContext: body.historicContext ?? null,
       vimeoUrl: body.vimeoUrl ?? null,
       date: body.date ?? null,
       place: body.place ?? null,

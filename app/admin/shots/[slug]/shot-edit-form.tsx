@@ -12,6 +12,7 @@ type ShotData = {
   slug: string;
   title: string;
   description: string | null;
+  historicContext: string | null;
   vimeoUrl: string | null;
   date: string | null;
   place: string | null;
@@ -35,6 +36,7 @@ export function ShotEditForm({
     slug: slug ?? "",
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
+    historicContext: initialData?.historicContext ?? "",
     vimeoUrl: initialData?.vimeoUrl ?? "",
     date: initialData?.date ?? "",
     place: initialData?.place ?? "",
@@ -57,6 +59,7 @@ export function ShotEditForm({
       slug: form.slug || undefined,
       title: form.title,
       description: form.description || null,
+      historicContext: form.historicContext || null,
       vimeoUrl: form.vimeoUrl || null,
       date: form.date || null,
       place: form.place || null,
@@ -178,6 +181,20 @@ export function ShotEditForm({
           placeholder="Shot description"
           rows={10}
           value={form.description}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="historicContext">Historic context</Label>
+        <textarea
+          className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          id="historicContext"
+          onChange={(e) =>
+            setForm((f) => ({ ...f, historicContext: e.target.value }))
+          }
+          placeholder="Historical or contextual background for this shot"
+          rows={10}
+          value={form.historicContext}
         />
       </div>
 

@@ -45,6 +45,7 @@ const db = drizzle(sqlClient);
 type ShotFrontMatter = {
   title?: string;
   description?: string;
+  historic_context?: string;
   vimeo_link?: string;
   date?: string;
   place?: string;
@@ -125,6 +126,7 @@ async function upsertShotFromFile(relativePath: string) {
     slug,
     title: metadata.title ?? slug,
     description,
+    historicContext: metadata.historic_context ?? null,
     vimeoUrl: metadata.vimeo_link ?? null,
     date: metadata.date ?? null,
     place: metadata.place ?? null,
@@ -151,6 +153,7 @@ async function upsertShotFromFile(relativePath: string) {
   const textToEmbed = [
     metadata.title,
     metadata.description,
+    metadata.historic_context,
     metadata.place,
     metadata.author,
     metadata.date,

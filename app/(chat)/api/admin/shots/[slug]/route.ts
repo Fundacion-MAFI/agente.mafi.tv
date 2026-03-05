@@ -56,6 +56,7 @@ export async function PATCH(
   let body: {
     title?: string;
     description?: string | null;
+    historicContext?: string | null;
     vimeoUrl?: string | null;
     date?: string | null;
     place?: string | null;
@@ -80,6 +81,10 @@ export async function PATCH(
     title: body.title ?? existing.title,
     description:
       body.description !== undefined ? body.description : existing.description,
+    historicContext:
+      body.historicContext !== undefined
+        ? body.historicContext
+        : existing.historicContext,
     vimeoUrl: body.vimeoUrl !== undefined ? body.vimeoUrl : existing.vimeoUrl,
     date: body.date !== undefined ? body.date : existing.date,
     place: body.place !== undefined ? body.place : existing.place,

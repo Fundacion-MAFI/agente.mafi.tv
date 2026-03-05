@@ -14,6 +14,7 @@ function buildMarkdown(shot: Shot): string {
     place: shot.place ?? undefined,
     author: shot.author ?? undefined,
     description: shot.description ?? undefined,
+    historic_context: shot.historicContext ?? undefined,
     tags: shot.tags.length > 0 ? shot.tags : undefined,
   };
 
