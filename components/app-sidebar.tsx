@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
@@ -70,9 +71,14 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   setOpenMobile(false);
                 }}
               >
-                <span className="cursor-pointer rounded-md px-2 font-semibold text-lg hover:bg-muted">
-                  Agente Fílmico
-                </span>
+                <Image
+                  alt="Agente MAFI"
+                  className="cursor-pointer object-contain hover:opacity-90"
+                  height={48}
+                  priority
+                  src="/images/agente-mafi-logo.png"
+                  width={160}
+                />
               </Link>
               <div className="flex flex-row gap-1">
                 <Tooltip>
