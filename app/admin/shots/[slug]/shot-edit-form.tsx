@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -75,6 +76,9 @@ export function ShotEditForm({
         if (!res.ok) {
           throw new Error(data.error ?? "Failed to update");
         }
+        if (data.warning) {
+          toast({ type: "warning", description: data.warning });
+        }
         router.push("/admin/shots");
         router.refresh();
       } else {
@@ -87,6 +91,9 @@ export function ShotEditForm({
         const data = await res.json();
         if (!res.ok) {
           throw new Error(data.error ?? "Failed to create");
+        }
+        if (data.warning) {
+          toast({ type: "warning", description: data.warning });
         }
         router.push(`/admin/shots/${data.slug}`);
         router.refresh();
@@ -108,9 +115,12 @@ export function ShotEditForm({
       const res = await fetch(`/api/admin/shots/${slug}`, {
         method: "DELETE",
       });
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error ?? "Failed to delete");
+      }
+      if (data.warning) {
+        toast({ type: "warning", description: data.warning });
       }
       router.push("/admin/shots");
       router.refresh();
