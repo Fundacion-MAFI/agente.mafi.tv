@@ -1,15 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,7 +105,6 @@ export function SettingsForm() {
   const [error, setError] = useState<string | null>(null);
   const [embeddingsStatus, setEmbeddingsStatus] =
     useState<EmbeddingsStatus | null>(null);
-  const [ingestRunning, setIngestRunning] = useState(false);
   const saveHandlerRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const fetchEmbeddingsStatus = useCallback(async (model?: string) => {
@@ -153,40 +143,6 @@ export function SettingsForm() {
       );
     }
   }, [loading, embeddingModel, fetchEmbeddingsStatus]);
-
-  const [ingestConfirmOpen, setIngestConfirmOpen] = useState(false);
-
-  const runIngest = useCallback(async () => {
-    if (ingestRunning) return;
-    setIngestConfirmOpen(false);
-    setIngestRunning(true);
-    try {
-      const res = await fetch("/api/admin/ingest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ type: "success", description: "Ingestion completed" });
-        await fetchEmbeddingsStatus(
-          typeof embeddingModel === "string" ? embeddingModel : undefined
-        );
-      } else {
-        toast({
-          type: "error",
-          description: data.error ?? "Ingestion failed",
-        });
-      }
-    } catch (err) {
-      toast({
-        type: "error",
-        description: err instanceof Error ? err.message : "Ingestion failed",
-      });
-    } finally {
-      setIngestRunning(false);
-    }
-  }, [ingestRunning, embeddingModel, fetchEmbeddingsStatus]);
 
   const isDirty =
     settings !== null &&
@@ -320,68 +276,8 @@ export function SettingsForm() {
 
       <section>
         <h2 className="mb-4 font-medium text-lg">Embedding & Chunking</h2>
-        <p className="mb-4 text-muted-foreground text-sm">
-          Ingestion populates embeddings for the selected model only. Run
-          ingestion after switching models. Chunk changes require re-ingest.
-        </p>
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          {embeddingsStatus && (
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm ${
-                embeddingsStatus.isReady
-                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-              }`}
-            >
-              {embeddingsStatus.isReady ? (
-                <>
-                  <span aria-hidden>✓</span>
-                  Embeddings ready ({embeddingsStatus.embeddingCount} shots)
-                </>
-              ) : (
-                <>
-                  <span aria-hidden>⚠</span>
-                  Embeddings missing ({embeddingsStatus.embeddingCount}/
-                  {embeddingsStatus.shotCount} shots)
-                </>
-              )}
-            </span>
-          )}
-          <Button
-            disabled={ingestRunning}
-            onClick={() => setIngestConfirmOpen(true)}
-            type="button"
-            variant="outline"
-          >
-            {ingestRunning ? "Running…" : "Run ingestion"}
-          </Button>
-        </div>
-        <AlertDialog
-          onOpenChange={setIngestConfirmOpen}
-          open={ingestConfirmOpen}
-        >
-          <AlertDialogContent className="max-w-sm">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Run ingestion?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This may take several minutes and will update embeddings for the
-                selected model.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <Button
-                disabled={ingestRunning}
-                onClick={() => runIngest()}
-                type="button"
-              >
-                Run ingestion
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
+          <div className="flex items-center gap-2">
             <Label htmlFor="embedding.model">Retrieval model</Label>
             <Select
               onValueChange={(value) => updateLocal("embedding.model", value)}
@@ -389,7 +285,7 @@ export function SettingsForm() {
                 settings["embedding.model"] ?? "openai/text-embedding-3-small"
               )}
             >
-              <SelectTrigger id="embedding.model">
+              <SelectTrigger id="embedding.model" className="w-[280px]">
                 <SelectValue placeholder="Select model" />
               </SelectTrigger>
               <SelectContent>
@@ -400,7 +296,31 @@ export function SettingsForm() {
                 ))}
               </SelectContent>
             </Select>
+            {embeddingsStatus && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm ${
+                  embeddingsStatus.isReady
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                }`}
+              >
+                {embeddingsStatus.isReady ? (
+                  <>
+                    <span aria-hidden>✓</span>
+                    {embeddingsStatus.embeddingCount} shots
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden>⚠</span>
+                    {embeddingsStatus.embeddingCount}/{embeddingsStatus.shotCount}{" "}
+                    shots
+                  </>
+                )}
+              </span>
+            )}
           </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="embedding.chunk_size">Chunk size</Label>
             <Input
