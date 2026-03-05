@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getToken } from "next-auth/jwt";
 import { auth } from "@/app/(auth)/auth";
 import { guestRegex } from "@/lib/constants";
 
@@ -33,12 +32,9 @@ export async function requireAdmin(
     return { ok: true };
   }
 
-  const token = await getToken({
-    req: request as unknown as { headers: Headers; url?: string },
-    secret: process.env.AUTH_SECRET,
-  });
+  const session = await auth();
 
-  if (!token?.email || guestRegex.test(token.email)) {
+  if (!session?.user?.email || guestRegex.test(session.user.email)) {
     return { ok: false, status: 401 };
   }
 
@@ -47,7 +43,7 @@ export async function requireAdmin(
     return { ok: false, status: 403 };
   }
 
-  const email = String(token.email).toLowerCase();
+  const email = session.user.email.toLowerCase();
   if (!adminEmails.includes(email)) {
     return { ok: false, status: 403 };
   }
