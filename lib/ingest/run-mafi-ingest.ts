@@ -12,6 +12,7 @@ import {
   isEmbeddingModelId,
 } from "@/lib/ai/embedding-models";
 import { generateShotEmbeddings } from "@/lib/ai/mafi-embeddings";
+import { embeddingModelMetadata } from "@/lib/db/schema/embedding-metadata";
 import { SHOT_EMBEDDING_TABLES, shots } from "@/lib/db/schema/shots";
 
 const INGEST_DEFAULTS = {
@@ -344,6 +345,25 @@ export async function runMafiIngest(
       "pruned",
       pruned
     );
+
+    if (embeddingsUpdated > 0) {
+      await db
+        .insert(embeddingModelMetadata)
+        .values({
+          modelId: embeddingModel,
+          chunkSize: chunkSize,
+          chunkOverlap: chunkOverlap,
+          embeddedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: embeddingModelMetadata.modelId,
+          set: {
+            chunkSize: chunkSize,
+            chunkOverlap: chunkOverlap,
+            embeddedAt: new Date(),
+          },
+        });
+    }
 
     await sqlClient.end();
 

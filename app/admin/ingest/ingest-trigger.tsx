@@ -27,7 +27,13 @@ const MODEL_LABELS: Record<string, string> = {
 type EmbeddingsStatusAll = {
   shotCount: number;
   activeModel: string;
-  models: { modelId: string; embeddingCount: number; isReady: boolean }[];
+  models: {
+    modelId: string;
+    embeddingCount: number;
+    isReady: boolean;
+    chunkSize: number | null;
+    chunkOverlap: number | null;
+  }[];
 };
 
 export function IngestTrigger() {
@@ -35,6 +41,8 @@ export function IngestTrigger() {
   const [output, setOutput] = useState<string | null>(null);
   const [status, setStatus] = useState<EmbeddingsStatusAll | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [purgeModelId, setPurgeModelId] = useState<string | null>(null);
+  const [purging, setPurging] = useState(false);
   const outputRef = useRef<HTMLPreElement>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -151,6 +159,54 @@ export function IngestTrigger() {
     }
   }, [running, fetchStatus]);
 
+  const handlePurge = useCallback(
+    async (modelId: string) => {
+      if (purging) return;
+      setPurgeModelId(null);
+      setPurging(true);
+      try {
+        const res = await fetch("/api/admin/embeddings/purge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ modelId }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast({ type: "success", description: `Purged ${data.deleted} embeddings` });
+          await fetchStatus();
+        } else {
+          toast({ type: "error", description: data.error ?? "Purge failed" });
+        }
+      } catch (err) {
+        toast({ type: "error", description: "Purge failed" });
+      } finally {
+        setPurging(false);
+      }
+    },
+    [purging, fetchStatus]
+  );
+
+  const handleSelectModel = useCallback(
+    async (modelId: string) => {
+      try {
+        const res = await fetch("/api/admin/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ "embedding.model": modelId }),
+        });
+        if (res.ok) {
+          toast({ type: "success", description: "Model selected" });
+          await fetchStatus();
+        } else {
+          toast({ type: "error", description: "Failed to select model" });
+        }
+      } catch (err) {
+        toast({ type: "error", description: "Failed to select model" });
+      }
+    },
+    [fetchStatus]
+  );
+
   return (
     <div className="space-y-6">
       {status && (
@@ -161,6 +217,8 @@ export function IngestTrigger() {
                 <th className="px-4 py-2 font-medium">Model</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">Shots</th>
+                <th className="px-4 py-2 font-medium">Chunk</th>
+                <th className="px-4 py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -195,12 +253,71 @@ export function IngestTrigger() {
                   <td className="px-4 py-2 text-muted-foreground">
                     {m.embeddingCount} / {status.shotCount}
                   </td>
+                  <td className="px-4 py-2 text-muted-foreground">
+                    {m.chunkSize != null && m.chunkOverlap != null ? (
+                      <span>
+                        {m.chunkSize} / {m.chunkOverlap}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/70">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        disabled={purging || m.embeddingCount === 0}
+                        onClick={() => setPurgeModelId(m.modelId)}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Purge
+                      </Button>
+                      <Button
+                        disabled={m.modelId === status.activeModel}
+                        onClick={() => handleSelectModel(m.modelId)}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Select
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <AlertDialog
+        onOpenChange={(open) => !open && setPurgeModelId(null)}
+        open={purgeModelId != null}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Purge embeddings?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all embeddings for this model. You
+              will need to run ingestion again to recreate them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              disabled={purging}
+              onClick={() =>
+                purgeModelId ? handlePurge(purgeModelId) : undefined
+              }
+              type="button"
+              variant="destructive"
+            >
+              {purging ? "Purging…" : "Purge"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">

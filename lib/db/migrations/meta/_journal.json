@@ -99,6 +99,13 @@
       "when": 1763900000000,
       "tag": "0013_shot_embeddings_2560",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1764000000000,
+      "tag": "0014_embedding_model_metadata",
+      "breakpoints": true
     }
   ]
 }

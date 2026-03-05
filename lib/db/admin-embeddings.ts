@@ -1,6 +1,6 @@
 import "server-only";
 
-import { count } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import postgres from "postgres";
 
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/lib/ai/embedding-models";
 import { getAdminSetting } from "./admin-settings";
 import { db } from "./queries";
+import { embeddingModelMetadata } from "./schema/embedding-metadata";
 import { shots } from "./schema/shots";
 
 const EMBEDDING_TABLE_NAMES = [
@@ -92,6 +93,8 @@ export type ModelStatus = {
   modelId: EmbeddingModelId;
   embeddingCount: number;
   isReady: boolean;
+  chunkSize: number | null;
+  chunkOverlap: number | null;
 };
 
 export type EmbeddingsStatusAll = {
@@ -115,6 +118,18 @@ export async function getEmbeddingsStatusAll(): Promise<EmbeddingsStatusAll> {
   const sql = getSqlClient();
   const models: ModelStatus[] = [];
 
+  const metadataRows = await db.select().from(embeddingModelMetadata);
+  const metadataByModel = new Map<
+    string,
+    { chunkSize: number; chunkOverlap: number }
+  >();
+  for (const row of metadataRows) {
+    metadataByModel.set(row.modelId, {
+      chunkSize: row.chunkSize,
+      chunkOverlap: row.chunkOverlap,
+    });
+  }
+
   for (const modelId of EMBEDDING_MODEL_IDS) {
     const dimensions = getEmbeddingDimensions(modelId);
     const tableName = `shot_embeddings_${dimensions}`;
@@ -124,7 +139,13 @@ export async function getEmbeddingsStatusAll(): Promise<EmbeddingsStatusAll> {
         tableName as (typeof EMBEDDING_TABLE_NAMES)[number]
       )
     ) {
-      models.push({ modelId, embeddingCount: 0, isReady: false });
+      models.push({
+        modelId,
+        embeddingCount: 0,
+        isReady: false,
+        chunkSize: null,
+        chunkOverlap: null,
+      });
       continue;
     }
 
@@ -134,8 +155,47 @@ export async function getEmbeddingsStatusAll(): Promise<EmbeddingsStatusAll> {
     );
     const embeddingCount = Number(row?.count ?? 0);
     const isReady = shotCount > 0 && embeddingCount >= shotCount;
-    models.push({ modelId, embeddingCount, isReady });
+    const meta = metadataByModel.get(modelId);
+    models.push({
+      modelId,
+      embeddingCount,
+      isReady,
+      chunkSize: meta?.chunkSize ?? null,
+      chunkOverlap: meta?.chunkOverlap ?? null,
+    });
   }
 
   return { shotCount, activeModel, models };
+}
+
+export async function purgeEmbeddingsForModel(
+  modelId: EmbeddingModelId
+): Promise<{ deleted: number }> {
+  const dimensions = getEmbeddingDimensions(modelId);
+  const tableName = `shot_embeddings_${dimensions}`;
+
+  if (
+    !EMBEDDING_TABLE_NAMES.includes(
+      tableName as (typeof EMBEDDING_TABLE_NAMES)[number]
+    )
+  ) {
+    return { deleted: 0 };
+  }
+
+  const sql = getSqlClient();
+  const [result] = await sql.unsafe<[{ count: string }]>(
+    `WITH deleted AS (
+       DELETE FROM ${tableName} WHERE model_id = $1
+       RETURNING id
+     )
+     SELECT COUNT(*)::text AS count FROM deleted`,
+    [modelId]
+  );
+  const deleted = Number(result?.count ?? 0);
+
+  await db
+    .delete(embeddingModelMetadata)
+    .where(eq(embeddingModelMetadata.modelId, modelId));
+
+  return { deleted };
 }
