@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/components/toast";
+import { Button } from "@/components/ui/button";
 
 export function IngestTrigger() {
   const [running, setRunning] = useState(false);
@@ -50,16 +50,12 @@ export function IngestTrigger() {
 
   return (
     <div className="space-y-4">
-      <Button
-        disabled={running}
-        onClick={handleIngest}
-        type="button"
-      >
+      <Button disabled={running} onClick={handleIngest} type="button">
         {running ? "Running…" : "Run ingestion"}
       </Button>
 
       {output && (
-        <pre className="max-h-96 overflow-auto rounded-md border border-input bg-muted p-4 text-muted-foreground text-xs whitespace-pre-wrap">
+        <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-input bg-muted p-4 text-muted-foreground text-xs">
           {output}
         </pre>
       )}

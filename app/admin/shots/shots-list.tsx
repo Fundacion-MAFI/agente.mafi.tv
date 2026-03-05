@@ -6,8 +6,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type Shot = {
   id: string;
@@ -42,9 +42,7 @@ function parseDateForSort(date: string | null): number {
       if (!Number.isNaN(parsed.getTime())) {
         return parsed.getTime();
       }
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   try {
     const parsed = new Date(date);
@@ -168,7 +166,7 @@ export function ShotsList() {
   return (
     <div className="space-y-4">
       <div className="relative">
-        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
         <Input
           className="pl-9"
           onChange={(e) => setSearch(e.target.value)}
@@ -216,8 +214,8 @@ export function ShotsList() {
           <tbody>
             {filteredAndSorted.map((shot) => (
               <tr
-                key={shot.id}
                 className="cursor-pointer border-b transition-colors last:border-b-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                key={shot.id}
                 onClick={() => router.push(`/admin/shots/${shot.slug}`)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -237,10 +235,10 @@ export function ShotsList() {
                     {shot.title}
                   </Link>
                 </td>
-                <td className="text-muted-foreground px-4 py-3 text-sm">
+                <td className="px-4 py-3 text-muted-foreground text-sm">
                   {shot.place ?? "—"}
                 </td>
-                <td className="text-muted-foreground px-4 py-3 text-sm">
+                <td className="px-4 py-3 text-muted-foreground text-sm">
                   {shot.date ?? "—"}
                 </td>
               </tr>

@@ -79,9 +79,9 @@ export function AdminNav() {
         </Link>
         {NAV_LINKS.map(({ href, label }) => (
           <Link
-            key={href}
             className="text-muted-foreground text-sm hover:text-foreground"
             href={href}
+            key={href}
             onClick={(e) => handleLinkClick(e, href)}
           >
             {label}

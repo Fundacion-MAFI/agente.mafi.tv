@@ -2,7 +2,6 @@ import "server-only";
 
 import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/artifact";
-import { getAdminSetting } from "@/lib/db/admin-settings";
 import {
   AGENTE_FILMICO_SYSTEM_PROMPT,
   artifactsPrompt,
@@ -12,6 +11,7 @@ import {
   sheetPrompt,
   titlePrompt,
 } from "@/lib/ai/prompts";
+import { getAdminSetting } from "@/lib/db/admin-settings";
 
 export type RequestHints = {
   latitude: Geo["latitude"];
@@ -65,7 +65,9 @@ export async function getTitlePrompt(): Promise<string> {
     : titlePrompt;
 }
 
-export async function getSystemPrompt(requestHints: RequestHints): Promise<string> {
+export async function getSystemPrompt(
+  requestHints: RequestHints
+): Promise<string> {
   const [regular, artifacts] = await Promise.all([
     getRegularPrompt(),
     getArtifactsPrompt(),

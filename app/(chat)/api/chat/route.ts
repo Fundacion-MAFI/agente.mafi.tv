@@ -21,6 +21,7 @@ import { getUsage } from "tokenlens/helpers";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { getEntitlementsForUserType } from "@/lib/ai/entitlements";
+import { getAgenteFilmicoPrompt, getSystemPrompt } from "@/lib/ai/get-prompts";
 import {
   ArchivoTimeoutError,
   type RetrievedShot,
@@ -29,7 +30,6 @@ import {
 import { type MafiAnswer, mafiAnswerSchema } from "@/lib/ai/mafi-schema";
 import type { ChatModel } from "@/lib/ai/models";
 import type { RequestHints } from "@/lib/ai/prompts";
-import { getAgenteFilmicoPrompt, getSystemPrompt } from "@/lib/ai/get-prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";

@@ -7,8 +7,12 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import matter from "gray-matter";
 import postgres from "postgres";
 
-import { generateShotEmbeddings } from "../lib/ai/mafi-embeddings";
-import { shotEmbeddings, shots } from "../lib/db/schema/shots";
+import {
+  EMBEDDING_MODEL_IDS,
+  getEmbeddingDimensions,
+} from "../lib/ai/embedding-models";
+import { generateShotEmbeddingsForAllModels } from "../lib/ai/mafi-embeddings";
+import { SHOT_EMBEDDING_TABLES, shots } from "../lib/db/schema/shots";
 
 // Load env: prefer .env.local for local overrides, fall back to .env
 config({ path: ".env.local" });
@@ -63,10 +67,7 @@ async function getIngestConfig(
       typeof map["ingest.throttle_delay_ms"] === "number" &&
       map["ingest.throttle_delay_ms"] >= 0
         ? (map["ingest.throttle_delay_ms"] as number)
-        : Number.parseInt(
-            process.env.INGEST_THROTTLE_DELAY_MS ?? "2000",
-            10
-          );
+        : Number.parseInt(process.env.INGEST_THROTTLE_DELAY_MS ?? "2000", 10);
     const chunk =
       typeof map["embedding.chunk_size"] === "number" &&
       map["embedding.chunk_size"] > 0
@@ -127,18 +128,18 @@ async function ensureShotsSchema() {
   const [result] = (await sqlClient`
     SELECT
       to_regclass('public.shots') AS shots,
-      to_regclass('public.shot_embeddings') AS "shotEmbeddings"
+      to_regclass('public.shot_embeddings_1536') AS "shotEmbeddings1536"
   `) as {
     shots: string | null;
-    shotEmbeddings: string | null;
+    shotEmbeddings1536: string | null;
   }[];
 
   const missingTables: string[] = [];
   if (!result?.shots) {
     missingTables.push("shots");
   }
-  if (!result?.shotEmbeddings) {
-    missingTables.push("shot_embeddings");
+  if (!result?.shotEmbeddings1536) {
+    missingTables.push("shot_embeddings_1536 (run migrations)");
   }
 
   if (missingTables.length > 0) {
@@ -232,22 +233,31 @@ async function upsertShotFromFile(
     .filter(Boolean)
     .join("\n\n");
 
-  const embeddingChunks = await generateShotEmbeddings(textToEmbed, {
+  const modelChunks = await generateShotEmbeddingsForAllModels(textToEmbed, {
     chunkSize: embeddingOptions.chunkSize,
     chunkOverlap: embeddingOptions.chunkOverlap,
   });
 
   await db.transaction(async (tx) => {
-    await tx
-      .delete(shotEmbeddings)
-      .where(eq(shotEmbeddings.shotId, upserted.id));
+    for (const table of Object.values(SHOT_EMBEDDING_TABLES)) {
+      await tx.delete(table).where(eq(table.shotId, upserted.id));
+    }
 
-    if (embeddingChunks.length > 0) {
-      await tx.insert(shotEmbeddings).values(
-        embeddingChunks.map((chunk) => ({
+    for (const modelId of EMBEDDING_MODEL_IDS) {
+      const chunks = modelChunks[modelId];
+      if (!chunks?.length) continue;
+
+      const dimensions = getEmbeddingDimensions(modelId);
+      const table =
+        SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
+      if (!table) continue;
+
+      await tx.insert(table).values(
+        chunks.map((chunk) => ({
           shotId: upserted.id,
           content: chunk.content,
           embedding: chunk.embedding,
+          modelId,
         }))
       );
     }
@@ -280,6 +290,7 @@ async function main() {
   const ingestConfig = await getIngestConfig(sqlClient);
 
   console.log("📼 Ingesting MAFI shots from", dataDirectory);
+  console.log("   Embedding for all", EMBEDDING_MODEL_IDS.length, "models");
   const files = await getMarkdownFiles();
   const processedSlugs = new Set<string>();
   let embeddingsUpdated = 0;

@@ -5,7 +5,7 @@ export default function AdminSettingsPage() {
     <div>
       <div className="mb-6">
         <h1 className="font-semibold text-2xl">Settings</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-muted-foreground text-sm">
           System prompts, retrieval, embedding, chat, and entitlements.
         </p>
       </div>

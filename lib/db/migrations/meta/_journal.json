@@ -85,6 +85,20 @@
       "when": 1763700000000,
       "tag": "0011_admin_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1763800000000,
+      "tag": "0012_multi_model_embeddings",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1763900000000,
+      "tag": "0013_shot_embeddings_2560",
+      "breakpoints": true
     }
   ]
 }

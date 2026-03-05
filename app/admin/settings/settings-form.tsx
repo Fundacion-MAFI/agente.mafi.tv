@@ -1,11 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAdminDirty } from "../admin-dirty-context";
+
+const EMBEDDING_MODELS = [
+  { id: "openai/text-embedding-3-small", label: "OpenAI 3 Small (1536)" },
+  { id: "openai/text-embedding-3-large", label: "OpenAI 3 Large (3072)" },
+  { id: "mistral/mistral-embed", label: "Mistral Embed (1024)" },
+  { id: "google/gemini-embedding-001", label: "Google Gemini (3072)" },
+  {
+    id: "google/text-multilingual-embedding-002",
+    label: "Google Multilingual 002 (768)",
+  },
+  { id: "google/text-embedding-005", label: "Google Embedding 005 (768)" },
+  { id: "alibaba/qwen3-embedding-4b", label: "Alibaba Qwen3 4B (2560)" },
+  { id: "amazon/titan-embed-text-v2", label: "Amazon Titan v2 (1024)" },
+] as const;
 
 type AdminSettingsMap = Record<
   string,
@@ -50,16 +71,20 @@ const PROMPT_DESCRIPTIONS: Record<(typeof PROMPT_KEYS)[number], string> = {
     "Used when the user asks to modify an existing artifact (e.g. “fix this code” or “add a column”).",
 };
 
+type EmbeddingsStatus = {
+  activeModel: string;
+  shotCount: number;
+  embeddingCount: number;
+  isReady: boolean;
+};
+
 function shallowEqual(a: AdminSettingsMap, b: AdminSettingsMap): boolean {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   for (const key of keys) {
     const va = a[key];
     const vb = b[key];
     if (Array.isArray(va) && Array.isArray(vb)) {
-      if (
-        va.length !== vb.length ||
-        va.some((v, i) => v !== vb[i])
-      ) {
+      if (va.length !== vb.length || va.some((v, i) => v !== vb[i])) {
         return false;
       }
     } else if (va !== vb) {
@@ -78,7 +103,24 @@ export function SettingsForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [embeddingsStatus, setEmbeddingsStatus] =
+    useState<EmbeddingsStatus | null>(null);
+  const [ingestRunning, setIngestRunning] = useState(false);
   const saveHandlerRef = useRef<() => Promise<void>>(() => Promise.resolve());
+
+  const fetchEmbeddingsStatus = useCallback(
+    async (model?: string) => {
+      const params = model ? `?model=${encodeURIComponent(model)}` : "";
+      const res = await fetch(`/api/admin/embeddings-status${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEmbeddingsStatus(data);
+      } else {
+        setEmbeddingsStatus(null);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -95,6 +137,54 @@ export function SettingsForm() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed"))
       .finally(() => setLoading(false));
   }, []);
+
+  const embeddingModel =
+    settings?.["embedding.model"] ?? "openai/text-embedding-3-small";
+  useEffect(() => {
+    if (!loading) {
+      fetchEmbeddingsStatus(
+        typeof embeddingModel === "string" ? embeddingModel : undefined
+      );
+    }
+  }, [loading, embeddingModel, fetchEmbeddingsStatus]);
+
+  const handleRunIngest = useCallback(async () => {
+    if (ingestRunning) return;
+    if (
+      !confirm(
+        "Run ingestion? This may take several minutes and will update embeddings for all models."
+      )
+    ) {
+      return;
+    }
+    setIngestRunning(true);
+    try {
+      const res = await fetch("/api/admin/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ type: "success", description: "Ingestion completed" });
+        await fetchEmbeddingsStatus(
+          typeof embeddingModel === "string" ? embeddingModel : undefined
+        );
+      } else {
+        toast({
+          type: "error",
+          description: data.error ?? "Ingestion failed",
+        });
+      }
+    } catch (err) {
+      toast({
+        type: "error",
+        description: err instanceof Error ? err.message : "Ingestion failed",
+      });
+    } finally {
+      setIngestRunning(false);
+    }
+  }, [ingestRunning, embeddingModel, fetchEmbeddingsStatus]);
 
   const isDirty =
     settings !== null &&
@@ -192,17 +282,17 @@ export function SettingsForm() {
       }}
     >
       <section>
-        <h2 className="font-medium text-lg mb-4">Prompts</h2>
+        <h2 className="mb-4 font-medium text-lg">Prompts</h2>
         <div className="space-y-4">
           {PROMPT_KEYS.map((key) => (
-            <div key={key} className="grid gap-2">
+            <div className="grid gap-2" key={key}>
               <div className="flex items-center justify-between">
                 <Label htmlFor={key}>{PROMPT_LABELS[key]}</Label>
                 <Button
+                  onClick={() => resetPrompt(key)}
+                  size="sm"
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  onClick={() => resetPrompt(key)}
                 >
                   Reset to default
                 </Button>
@@ -227,11 +317,64 @@ export function SettingsForm() {
       </section>
 
       <section>
-        <h2 className="font-medium text-lg mb-4">Embedding & Chunking</h2>
-        <p className="text-muted-foreground text-sm mb-4">
-          Re-ingest required for changes to take effect.
+        <h2 className="mb-4 font-medium text-lg">Embedding & Chunking</h2>
+        <p className="mb-4 text-muted-foreground text-sm">
+          Embeddings are pre-computed for all models. Switch instantly in admin.
+          Chunk changes require re-ingest.
         </p>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          {embeddingsStatus && (
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium ${
+                embeddingsStatus.isReady
+                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              }`}
+            >
+              {embeddingsStatus.isReady ? (
+                <>
+                  <span aria-hidden>✓</span>
+                  Embeddings ready ({embeddingsStatus.embeddingCount} shots)
+                </>
+              ) : (
+                <>
+                  <span aria-hidden>⚠</span>
+                  Embeddings missing ({embeddingsStatus.embeddingCount}/
+                  {embeddingsStatus.shotCount} shots)
+                </>
+              )}
+            </span>
+          )}
+          <Button
+            disabled={ingestRunning}
+            onClick={handleRunIngest}
+            type="button"
+            variant="outline"
+          >
+            {ingestRunning ? "Running…" : "Run ingestion"}
+          </Button>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="embedding.model">Retrieval model</Label>
+            <Select
+              onValueChange={(value) => updateLocal("embedding.model", value)}
+              value={String(
+                settings["embedding.model"] ?? "openai/text-embedding-3-small"
+              )}
+            >
+              <SelectTrigger id="embedding.model">
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                {EMBEDDING_MODELS.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <Label htmlFor="embedding.chunk_size">Chunk size</Label>
             <Input
@@ -266,7 +409,7 @@ export function SettingsForm() {
       </section>
 
       <section>
-        <h2 className="font-medium text-lg mb-4">Retrieval</h2>
+        <h2 className="mb-4 font-medium text-lg">Retrieval</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="retrieval.k">Shots per query (k)</Label>
@@ -329,7 +472,9 @@ export function SettingsForm() {
             />
           </div>
           <div>
-            <Label htmlFor="retrieval.cache_max_entries">Cache max entries</Label>
+            <Label htmlFor="retrieval.cache_max_entries">
+              Cache max entries
+            </Label>
             <Input
               id="retrieval.cache_max_entries"
               min={1}
@@ -347,7 +492,7 @@ export function SettingsForm() {
       </section>
 
       <section>
-        <h2 className="font-medium text-lg mb-4">Chat</h2>
+        <h2 className="mb-4 font-medium text-lg">Chat</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="chat.archivo_retrieval_timeout_ms">
@@ -363,7 +508,9 @@ export function SettingsForm() {
                 )
               }
               type="number"
-              value={String(settings["chat.archivo_retrieval_timeout_ms"] ?? 12_000)}
+              value={String(
+                settings["chat.archivo_retrieval_timeout_ms"] ?? 12_000
+              )}
             />
           </div>
           <div>
@@ -380,11 +527,15 @@ export function SettingsForm() {
                 )
               }
               type="number"
-              value={String(settings["chat.archivo_playlist_timeout_ms"] ?? 28_000)}
+              value={String(
+                settings["chat.archivo_playlist_timeout_ms"] ?? 28_000
+              )}
             />
           </div>
           <div>
-            <Label htmlFor="chat.step_count">Max tool-call steps per turn</Label>
+            <Label htmlFor="chat.step_count">
+              Max tool-call steps per turn
+            </Label>
             <Input
               id="chat.step_count"
               min={1}
@@ -402,10 +553,10 @@ export function SettingsForm() {
       </section>
 
       <section>
-        <h2 className="font-medium text-lg mb-4">Entitlements</h2>
+        <h2 className="mb-4 font-medium text-lg">Entitlements</h2>
         <div className="space-y-6">
           <div>
-            <h3 className="font-medium text-sm mb-2">Guest</h3>
+            <h3 className="mb-2 font-medium text-sm">Guest</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="entitlements.guest.max_messages_per_day">
@@ -455,7 +606,7 @@ export function SettingsForm() {
             </div>
           </div>
           <div>
-            <h3 className="font-medium text-sm mb-2">Regular</h3>
+            <h3 className="mb-2 font-medium text-sm">Regular</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="entitlements.regular.max_messages_per_day">
@@ -491,9 +642,7 @@ export function SettingsForm() {
                   placeholder="chat-model, film-agent"
                   value={
                     Array.isArray(
-                      settings[
-                        "entitlements.regular.available_chat_model_ids"
-                      ]
+                      settings["entitlements.regular.available_chat_model_ids"]
                     )
                       ? (
                           settings[
@@ -510,8 +659,8 @@ export function SettingsForm() {
       </section>
 
       <section>
-        <h2 className="font-medium text-lg mb-4">Ingestion</h2>
-        <p className="text-muted-foreground text-sm mb-4">
+        <h2 className="mb-4 font-medium text-lg">Ingestion</h2>
+        <p className="mb-4 text-muted-foreground text-sm">
           Throttle settings for when ingestion is triggered. See{" "}
           <a className="underline" href="/admin/ingest">
             /admin/ingest
@@ -533,7 +682,9 @@ export function SettingsForm() {
             </Label>
           </div>
           <div>
-            <Label htmlFor="ingest.throttle_delay_ms">Throttle delay (ms)</Label>
+            <Label htmlFor="ingest.throttle_delay_ms">
+              Throttle delay (ms)
+            </Label>
             <Input
               id="ingest.throttle_delay_ms"
               min={0}

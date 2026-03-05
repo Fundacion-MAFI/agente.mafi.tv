@@ -2,8 +2,13 @@ import "server-only";
 
 import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
-import { generateShotEmbeddings } from "@/lib/ai/mafi-embeddings";
-import { type Shot, shotEmbeddings, shots } from "@/lib/db/schema/shots";
+import {
+  EMBEDDING_MODEL_IDS,
+  type EmbeddingModelId,
+  getEmbeddingDimensions,
+} from "@/lib/ai/embedding-models";
+import { generateShotEmbeddingsForAllModels } from "@/lib/ai/mafi-embeddings";
+import { SHOT_EMBEDDING_TABLES, type Shot, shots } from "@/lib/db/schema/shots";
 import { db } from "./queries";
 
 export type ShotInsert = Omit<Shot, "id" | "createdAt" | "updatedAt"> & {
@@ -94,18 +99,28 @@ export async function upsertShotWithEmbeddings(
     .returning();
 
   const textToEmbed = buildTextToEmbed(upserted);
-  const embeddingChunks = await generateShotEmbeddings(textToEmbed);
+  const modelChunks = await generateShotEmbeddingsForAllModels(textToEmbed);
 
   await db.transaction(async (tx) => {
-    await tx
-      .delete(shotEmbeddings)
-      .where(eq(shotEmbeddings.shotId, upserted.id));
-    if (embeddingChunks.length > 0) {
-      await tx.insert(shotEmbeddings).values(
-        embeddingChunks.map((chunk) => ({
+    for (const table of Object.values(SHOT_EMBEDDING_TABLES)) {
+      await tx.delete(table).where(eq(table.shotId, upserted.id));
+    }
+
+    for (const modelId of EMBEDDING_MODEL_IDS) {
+      const chunks = modelChunks[modelId];
+      if (!chunks?.length) continue;
+
+      const dimensions = getEmbeddingDimensions(modelId);
+      const table =
+        SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
+      if (!table) continue;
+
+      await tx.insert(table).values(
+        chunks.map((chunk) => ({
           shotId: upserted.id,
           content: chunk.content,
           embedding: chunk.embedding,
+          modelId,
         }))
       );
     }

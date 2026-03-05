@@ -1,8 +1,8 @@
 import "server-only";
 
 import type { UserType } from "@/app/(auth)/auth";
-import type { ChatModel } from "./models";
 import { getAdminSetting } from "@/lib/db/admin-settings";
+import type { ChatModel } from "./models";
 
 export type Entitlements = {
   maxMessagesPerDay: number;
@@ -45,8 +45,7 @@ export async function getEntitlementsForUserType(
         ? maxMessagesPerDay
         : defaultEntitlements.maxMessagesPerDay,
     availableChatModelIds:
-      Array.isArray(availableChatModelIds) &&
-      availableChatModelIds.length > 0
+      Array.isArray(availableChatModelIds) && availableChatModelIds.length > 0
         ? availableChatModelIds
         : defaultEntitlements.availableChatModelIds,
   };

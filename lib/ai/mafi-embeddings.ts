@@ -1,11 +1,15 @@
-import { gateway } from "@ai-sdk/gateway";
 import { embedMany } from "ai";
+import {
+  DEFAULT_EMBEDDING_MODEL,
+  EMBEDDING_MODEL_IDS,
+  type EmbeddingModelId,
+  getEmbeddingDimensions,
+  getEmbeddingModel,
+  isEmbeddingModelId,
+} from "@/lib/ai/embedding-models";
 
 const DEFAULT_CHUNK_SIZE = 800;
 const DEFAULT_CHUNK_OVERLAP = 200;
-const embeddingModel = gateway.textEmbeddingModel(
-  "openai/text-embedding-3-small"
-);
 
 export type ShotEmbeddingChunk = {
   content: string;
@@ -60,25 +64,29 @@ export function chunkShotText(
 
 export async function generateShotEmbeddings(
   text: string,
-  options?: { chunkSize?: number; chunkOverlap?: number }
+  options?: {
+    chunkSize?: number;
+    chunkOverlap?: number;
+    modelId?: EmbeddingModelId;
+  }
 ): Promise<ShotEmbeddingChunk[]> {
   const trimmed = text.replace(/\r\n/g, "\n").trim();
   if (!trimmed) {
     return [];
   }
 
-  const chunkSize =
-    options?.chunkSize ?? DEFAULT_CHUNK_SIZE;
-  const chunkOverlap =
-    options?.chunkOverlap ?? DEFAULT_CHUNK_OVERLAP;
+  const modelId = options?.modelId ?? DEFAULT_EMBEDDING_MODEL;
+  const chunkSize = options?.chunkSize ?? DEFAULT_CHUNK_SIZE;
+  const chunkOverlap = options?.chunkOverlap ?? DEFAULT_CHUNK_OVERLAP;
   const chunks = chunkShotText(trimmed, chunkSize, chunkOverlap);
 
   if (chunks.length === 0) {
     return [];
   }
 
+  const model = getEmbeddingModel(modelId);
   const { embeddings } = await embedMany({
-    model: embeddingModel,
+    model,
     values: chunks,
   });
 
@@ -86,4 +94,47 @@ export async function generateShotEmbeddings(
     content: chunks[index],
     embedding,
   }));
+}
+
+export type ModelEmbeddingChunks = Record<
+  EmbeddingModelId,
+  ShotEmbeddingChunk[]
+>;
+
+/**
+ * Generate embeddings for all supported models. Used during ingest for
+ * multi-model support (instant switching in admin).
+ */
+export async function generateShotEmbeddingsForAllModels(
+  text: string,
+  options?: { chunkSize?: number; chunkOverlap?: number }
+): Promise<ModelEmbeddingChunks> {
+  const trimmed = text.replace(/\r\n/g, "\n").trim();
+  if (!trimmed) {
+    return {} as ModelEmbeddingChunks;
+  }
+
+  const chunkSize = options?.chunkSize ?? DEFAULT_CHUNK_SIZE;
+  const chunkOverlap = options?.chunkOverlap ?? DEFAULT_CHUNK_OVERLAP;
+  const chunks = chunkShotText(trimmed, chunkSize, chunkOverlap);
+
+  if (chunks.length === 0) {
+    return {} as ModelEmbeddingChunks;
+  }
+
+  const result = {} as ModelEmbeddingChunks;
+
+  for (const modelId of EMBEDDING_MODEL_IDS) {
+    const model = getEmbeddingModel(modelId);
+    const { embeddings } = await embedMany({
+      model,
+      values: chunks,
+    });
+    result[modelId] = embeddings.map((embedding, index) => ({
+      content: chunks[index],
+      embedding,
+    }));
+  }
+
+  return result;
 }

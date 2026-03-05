@@ -1,12 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth/admin";
-import {
-  getAdminSettings,
-  setAdminSettings,
-  type AdminSettingKey,
-  type AdminSettingsMap,
-  DEFAULTS,
-} from "@/lib/db/admin-settings";
+import { isEmbeddingModelId } from "@/lib/ai/embedding-models";
 import {
   AGENTE_FILMICO_SYSTEM_PROMPT,
   artifactsPrompt,
@@ -15,6 +8,14 @@ import {
   sheetPrompt,
   titlePrompt,
 } from "@/lib/ai/prompts";
+import { requireAdmin } from "@/lib/auth/admin";
+import {
+  type AdminSettingKey,
+  type AdminSettingsMap,
+  DEFAULTS,
+  getAdminSettings,
+  setAdminSettings,
+} from "@/lib/db/admin-settings";
 
 const PROMPT_DEFAULTS: Partial<AdminSettingsMap> = {
   "prompts.agente_filmico": AGENTE_FILMICO_SYSTEM_PROMPT,
@@ -44,7 +45,10 @@ function withPromptDefaults(settings: AdminSettingsMap): AdminSettingsMap {
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
   if (!auth.ok) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: auth.status }
+    );
   }
 
   try {
@@ -71,6 +75,7 @@ const ALLOWED_KEYS: AdminSettingKey[] = [
   "prompts.sheet",
   "prompts.title",
   "prompts.update_document",
+  "embedding.model",
   "embedding.chunk_size",
   "embedding.chunk_overlap",
   "retrieval.k",
@@ -93,10 +98,17 @@ function parseValue(
   key: AdminSettingKey,
   raw: unknown
 ): string | number | boolean | string[] | undefined {
-  if (raw === null || raw === undefined) return undefined;
+  if (raw === null || raw === undefined) return;
 
   if (key.startsWith("prompts.")) {
     return typeof raw === "string" ? raw : String(raw);
+  }
+
+  if (key === "embedding.model") {
+    const trimmed = typeof raw === "string" ? raw.trim() : "";
+    return trimmed.length > 0 && isEmbeddingModelId(trimmed)
+      ? trimmed
+      : undefined;
   }
 
   if (
@@ -108,9 +120,12 @@ function parseValue(
       return raw.filter((x): x is string => typeof x === "string");
     }
     if (typeof raw === "string") {
-      return raw.split(",").map((s) => s.trim()).filter(Boolean);
+      return raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     }
-    return undefined;
+    return;
   }
 
   if (
@@ -132,10 +147,10 @@ function parseValue(
     if (typeof raw === "boolean") return raw;
     if (raw === "1" || raw === "true" || raw === "yes") return true;
     if (raw === "0" || raw === "false" || raw === "no") return false;
-    return undefined;
+    return;
   }
 
-  return undefined;
+  return;
 }
 
 export async function PATCH(request: Request) {

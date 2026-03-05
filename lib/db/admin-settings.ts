@@ -10,6 +10,7 @@ export type AdminSettingKey =
   | "prompts.sheet"
   | "prompts.title"
   | "prompts.update_document"
+  | "embedding.model"
   | "embedding.chunk_size"
   | "embedding.chunk_overlap"
   | "retrieval.k"
@@ -31,34 +32,36 @@ export type AdminSettingsMap = Partial<
   Record<AdminSettingKey, string | number | boolean | string[]>
 >;
 
-const DEFAULTS: Record<AdminSettingKey, string | number | boolean | string[]> = {
-  "prompts.agente_filmico": "",
-  "prompts.regular": "",
-  "prompts.artifacts": "",
-  "prompts.code": "",
-  "prompts.sheet": "",
-  "prompts.title": "",
-  "prompts.update_document": "",
-  "embedding.chunk_size": 800,
-  "embedding.chunk_overlap": 200,
-  "retrieval.k": 24,
-  "retrieval.max_result_limit": 50,
-  "retrieval.timeout_ms": 12_000,
-  "retrieval.cache_ttl_ms": 300_000,
-  "retrieval.cache_max_entries": 128,
-  "chat.archivo_retrieval_timeout_ms": 12_000,
-  "chat.archivo_playlist_timeout_ms": 28_000,
-  "chat.step_count": 5,
-  "entitlements.guest.max_messages_per_day": 20,
-  "entitlements.guest.available_chat_model_ids": ["chat-model", "film-agent"],
-  "entitlements.regular.max_messages_per_day": 100,
-  "entitlements.regular.available_chat_model_ids": [
-    "chat-model",
-    "film-agent",
-  ],
-  "ingest.throttle_enabled": false,
-  "ingest.throttle_delay_ms": 2000,
-};
+const DEFAULTS: Record<AdminSettingKey, string | number | boolean | string[]> =
+  {
+    "prompts.agente_filmico": "",
+    "prompts.regular": "",
+    "prompts.artifacts": "",
+    "prompts.code": "",
+    "prompts.sheet": "",
+    "prompts.title": "",
+    "prompts.update_document": "",
+    "embedding.model": "openai/text-embedding-3-small",
+    "embedding.chunk_size": 800,
+    "embedding.chunk_overlap": 200,
+    "retrieval.k": 24,
+    "retrieval.max_result_limit": 50,
+    "retrieval.timeout_ms": 12_000,
+    "retrieval.cache_ttl_ms": 300_000,
+    "retrieval.cache_max_entries": 128,
+    "chat.archivo_retrieval_timeout_ms": 12_000,
+    "chat.archivo_playlist_timeout_ms": 28_000,
+    "chat.step_count": 5,
+    "entitlements.guest.max_messages_per_day": 20,
+    "entitlements.guest.available_chat_model_ids": ["chat-model", "film-agent"],
+    "entitlements.regular.max_messages_per_day": 100,
+    "entitlements.regular.available_chat_model_ids": [
+      "chat-model",
+      "film-agent",
+    ],
+    "ingest.throttle_enabled": false,
+    "ingest.throttle_delay_ms": 2000,
+  };
 
 export async function getAdminSetting<K extends AdminSettingKey>(
   key: K
