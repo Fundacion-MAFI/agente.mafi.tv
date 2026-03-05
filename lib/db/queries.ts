@@ -80,6 +80,39 @@ export async function createGuestUser() {
   }
 }
 
+/**
+ * Ensures a user exists in the DB. Used when a session has a userId that doesn't
+ * exist in this database (e.g. preview deployment with separate Neon branch).
+ * Creates a minimal guest record so the FK constraint is satisfied.
+ */
+export async function ensureUserExists(userId: string): Promise<void> {
+  const [existing] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+
+  if (existing) {
+    return;
+  }
+
+  const email = `guest-restored-${userId}`.slice(0, 64);
+  const password = generateHashedPassword(generateUUID());
+
+  try {
+    await db
+      .insert(user)
+      .values({ id: userId, email, password })
+      .onConflictDoNothing({ target: user.id });
+  } catch (error) {
+    console.error("ensureUserExists failed", { error, userId });
+    throw new ChatSDKError(
+      "bad_request:database",
+      error instanceof Error ? error.message : "Failed to ensure user exists"
+    );
+  }
+}
+
 export async function saveChat({
   id,
   userId,
