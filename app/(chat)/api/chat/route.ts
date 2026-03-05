@@ -44,6 +44,7 @@ import { getAdminSetting } from "@/lib/db/admin-settings";
 import {
   createStreamId,
   deleteChatById,
+  ensureUserExists,
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
@@ -511,6 +512,8 @@ export async function POST(request: Request) {
       // Only fetch messages if chat already exists
       messagesFromDb = await getMessagesByChatId({ id });
     } else {
+      await ensureUserExists(session.user.id);
+
       const title = await generateTitleFromUserMessage({
         message,
       });
