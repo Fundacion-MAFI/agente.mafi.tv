@@ -65,34 +65,45 @@ function VimeoPlayer({
       return;
     }
 
+    let cancelled = false;
+
+    const ignorePlayError = (_err: unknown) => {
+      // PlayInterrupted: play() was interrupted by pause() - expected when scrolling quickly
+      // Silently ignore to avoid unhandled promise rejection
+    };
+
     if (isInView) {
-      player.getPaused().then((paused: boolean) => {
-        if (paused) {
-          player.getCurrentTime().then((seconds: number) => {
-            // If the video is at the beginning (less than 1s played), seek to start time
-            if (seconds < 1) {
-              const start = startTime ?? 4;
-              player
-                .setCurrentTime(start)
-                .then(() => player.play())
-                .catch(() => player.play());
-            } else {
-              player.play().catch(() => {
-                // ignore
-              });
-            }
-          });
-        }
-      });
+      player
+        .getPaused()
+        .then((paused: boolean) => {
+          if (cancelled || !paused) return;
+          return player.getCurrentTime();
+        })
+        .then((seconds: number | void) => {
+          if (cancelled || seconds === undefined) return;
+          if (seconds < 1) {
+            const start = startTime ?? 4;
+            return player
+              .setCurrentTime(start)
+              .then(() => (cancelled ? undefined : player.play()))
+              .catch(ignorePlayError);
+          }
+          return player.play().catch(ignorePlayError);
+        })
+        .catch(() => {});
     } else {
-      player.getPaused().then((paused: boolean) => {
-        if (!paused) {
-          player.pause().catch(() => {
-            // ignore
-          });
-        }
-      });
+      player
+        .getPaused()
+        .then((paused: boolean) => {
+          if (cancelled || paused) return;
+          return player.pause().catch(() => {});
+        })
+        .catch(() => {});
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [isInView, startTime]);
 
   return (
