@@ -241,6 +241,8 @@ http://localhost:3000
 
 ---
 
+d
+
 ## Archive Ingestion Workflow
 
 The MAFI archive in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script:
