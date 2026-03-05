@@ -59,8 +59,8 @@ const DEFAULTS: Record<AdminSettingKey, string | number | boolean | string[]> =
       "chat-model",
       "film-agent",
     ],
-    "ingest.throttle_enabled": false,
-    "ingest.throttle_delay_ms": 2000,
+    "ingest.throttle_enabled": true,
+    "ingest.throttle_delay_ms": 10_000,
   };
 
 export async function getAdminSetting<K extends AdminSettingKey>(

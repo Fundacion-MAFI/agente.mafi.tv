@@ -670,7 +670,7 @@ export function SettingsForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex items-center gap-2">
             <input
-              checked={settings["ingest.throttle_enabled"] === true}
+              checked={settings["ingest.throttle_enabled"] !== false}
               id="ingest.throttle_enabled"
               onChange={(e) =>
                 updateLocal("ingest.throttle_enabled", e.target.checked)
@@ -691,11 +691,11 @@ export function SettingsForm() {
               onChange={(e) =>
                 updateLocal(
                   "ingest.throttle_delay_ms",
-                  Number.parseInt(e.target.value, 10) || 2000
+                  Number.parseInt(e.target.value, 10) || 10_000
                 )
               }
               type="number"
-              value={String(settings["ingest.throttle_delay_ms"] ?? 2000)}
+              value={String(settings["ingest.throttle_delay_ms"] ?? 10_000)}
             />
           </div>
         </div>

@@ -15,8 +15,8 @@ import { generateShotEmbeddings } from "@/lib/ai/mafi-embeddings";
 import { SHOT_EMBEDDING_TABLES, shots } from "@/lib/db/schema/shots";
 
 const INGEST_DEFAULTS = {
-  throttleEnabled: false,
-  throttleDelayMs: 2000,
+  throttleEnabled: true,
+  throttleDelayMs: 10_000,
   chunkSize: 800,
   chunkOverlap: 200,
   embeddingModel: "openai/text-embedding-3-small" as EmbeddingModelId,
@@ -140,7 +140,7 @@ export async function runMafiIngest(
         : INGEST_DEFAULTS.embeddingModel;
 
     const throttle =
-      map["ingest.throttle_enabled"] === true ||
+      map["ingest.throttle_enabled"] !== false ||
       process.env.INGEST_THROTTLE_EMBEDDINGS === "1" ||
       process.env.INGEST_THROTTLE_EMBEDDINGS === "true" ||
       process.env.INGEST_THROTTLE_EMBEDDINGS === "yes";
@@ -148,7 +148,7 @@ export async function runMafiIngest(
       typeof map["ingest.throttle_delay_ms"] === "number" &&
       map["ingest.throttle_delay_ms"] >= 0
         ? (map["ingest.throttle_delay_ms"] as number)
-        : 2000;
+        : INGEST_DEFAULTS.throttleDelayMs;
     const chunkSize =
       typeof map["embedding.chunk_size"] === "number" &&
       map["embedding.chunk_size"] > 0
