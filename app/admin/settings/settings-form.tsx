@@ -33,6 +33,23 @@ const PROMPT_LABELS: Record<(typeof PROMPT_KEYS)[number], string> = {
     "Document update (use {mediaType} and {currentContent} as placeholders)",
 };
 
+const PROMPT_DESCRIPTIONS: Record<(typeof PROMPT_KEYS)[number], string> = {
+  "prompts.agente_filmico":
+    "Used when the user selects Agente Fílmico and asks a question about the MAFI archive. Produces a curatorial playlist from retrieved shots.",
+  "prompts.regular":
+    "Base tone for every message in regular chat mode (GPT-4o mini). Combined with artifacts and geo hints.",
+  "prompts.artifacts":
+    "Tells the model when to use createDocument and updateDocument. Shown on every message in regular chat.",
+  "prompts.code":
+    "Used when the model creates a Python code artifact (e.g. user asks “write a factorial function”).",
+  "prompts.sheet":
+    "Used when the model creates a spreadsheet artifact (e.g. user asks “create a CSV of expenses”).",
+  "prompts.title":
+    "Used once when the user sends the first message in a new chat. Generates a short title (≤80 chars).",
+  "prompts.update_document":
+    "Used when the user asks to modify an existing artifact (e.g. “fix this code” or “add a column”).",
+};
+
 function shallowEqual(a: AdminSettingsMap, b: AdminSettingsMap): boolean {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   for (const key of keys) {
@@ -190,6 +207,9 @@ export function SettingsForm() {
                   Reset to default
                 </Button>
               </div>
+              <p className="text-muted-foreground text-xs">
+                {PROMPT_DESCRIPTIONS[key]}
+              </p>
               <textarea
                 className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 id={key}
