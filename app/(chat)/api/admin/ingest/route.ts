@@ -4,6 +4,13 @@ import { runMafiIngest } from "@/lib/ingest/run-mafi-ingest";
 
 export const maxDuration = 300;
 
+function streamNdjsonLine(
+  encoder: TextEncoder,
+  obj: { type: string; [key: string]: unknown }
+): Uint8Array {
+  return encoder.encode(JSON.stringify(obj) + "\n");
+}
+
 export async function POST(request: Request) {
   const auth = await requireAdmin(request);
   if (!auth.ok) {
@@ -13,24 +20,54 @@ export async function POST(request: Request) {
     );
   }
 
-  const prune = request.url.includes("prune=1") || request.url.includes("prune=true");
+  const prune =
+    request.url.includes("prune=1") || request.url.includes("prune=true");
 
-  const result = await runMafiIngest({ prune });
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const onLog = (line: string) => {
+        controller.enqueue(
+          streamNdjsonLine(encoder, { type: "log", line })
+        );
+      };
 
-  if (result.ok) {
-    return NextResponse.json({
-      ok: true,
-      message: "Ingestion completed",
-      output: result.output,
-    });
-  }
-
-  return NextResponse.json(
-    {
-      error: result.error ?? "Ingestion failed",
-      output: result.output,
-      exitCode: 1,
+      try {
+        const result = await runMafiIngest({ prune, onLog });
+        controller.enqueue(
+          streamNdjsonLine(encoder, {
+            type: "done",
+            ok: result.ok,
+            output: result.output,
+            filesProcessed: result.filesProcessed,
+            embeddingsUpdated: result.embeddingsUpdated,
+            pruned: result.pruned,
+            error: result.error,
+          })
+        );
+      } catch (err) {
+        controller.enqueue(
+          streamNdjsonLine(encoder, {
+            type: "done",
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+            output: "",
+            filesProcessed: 0,
+            embeddingsUpdated: 0,
+            pruned: 0,
+          })
+        );
+      } finally {
+        controller.close();
+      }
     },
-    { status: 500 }
-  );
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }

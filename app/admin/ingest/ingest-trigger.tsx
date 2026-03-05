@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +25,7 @@ export function IngestTrigger() {
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [status, setStatus] = useState<EmbeddingsStatusAll | null>(null);
+  const outputRef = useRef<HTMLPreElement>(null);
 
   const fetchStatus = useCallback(async () => {
     const res = await fetch("/api/admin/embeddings-status?all=true");
@@ -40,6 +41,12 @@ export function IngestTrigger() {
     fetchStatus();
   }, [fetchStatus]);
 
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [output]);
+
   const handleIngest = async () => {
     if (running) return;
     if (
@@ -51,7 +58,7 @@ export function IngestTrigger() {
     }
 
     setRunning(true);
-    setOutput(null);
+    setOutput("");
 
     try {
       const res = await fetch("/api/admin/ingest", {
@@ -59,19 +66,74 @@ export function IngestTrigger() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        setOutput(data.output ?? "Done.");
-        toast({ type: "success", description: "Ingestion completed" });
-        await fetchStatus();
-      } else {
-        setOutput(
-          [data.output, data.stderr].filter(Boolean).join("\n\n") ||
-            data.error ||
-            "Unknown error"
-        );
+      if (!res.body) {
+        const data = await res.json().catch(() => ({}));
+        setOutput(data.error ?? "No response body");
         toast({ type: "error", description: data.error ?? "Ingestion failed" });
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line) continue;
+
+          let data: { type: string; line?: string; ok?: boolean; error?: string };
+          try {
+            data = JSON.parse(line) as typeof data;
+          } catch {
+            continue;
+          }
+
+          if (data.type === "log" && typeof data.line === "string") {
+            const line = data.line;
+            setOutput((prev) => (prev ?? "") + line + "\n");
+          } else if (data.type === "done") {
+            if (data.ok) {
+              toast({ type: "success", description: "Ingestion completed" });
+              await fetchStatus();
+            } else {
+              toast({
+                type: "error",
+                description: data.error ?? "Ingestion failed",
+              });
+            }
+          }
+        }
+      }
+
+      if (buffer.trim()) {
+        try {
+          const data = JSON.parse(buffer.trim()) as {
+            type: string;
+            line?: string;
+            ok?: boolean;
+            error?: string;
+          };
+          if (data.type === "log" && typeof data.line === "string") {
+            const line = data.line;
+            setOutput((prev) => (prev ?? "") + line + "\n");
+          } else if (data.type === "done" && !data.ok) {
+            toast({
+              type: "error",
+              description: data.error ?? "Ingestion failed",
+            });
+          }
+        } catch {
+          // ignore parse errors for trailing buffer
+        }
       }
     } catch (err) {
       setOutput(err instanceof Error ? err.message : "Request failed");
@@ -145,9 +207,12 @@ export function IngestTrigger() {
         </Button>
       </div>
 
-      {output && (
-        <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-input bg-muted p-4 text-muted-foreground text-xs">
-          {output}
+      {(running || output) && (
+        <pre
+          ref={outputRef}
+          className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-input bg-muted p-4 text-muted-foreground text-xs"
+        >
+          {output || (running ? "Starting…" : "")}
         </pre>
       )}
     </div>
