@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
+import { useAdminIngest } from "../admin-ingest-context";
 
 const MODEL_LABELS: Record<string, string> = {
   "openai/text-embedding-3-small": "OpenAI 3 Small",
@@ -37,13 +38,15 @@ type EmbeddingsStatusAll = {
 };
 
 export function IngestTrigger() {
-  const [running, setRunning] = useState(false);
-  const [output, setOutput] = useState<string | null>(null);
+  const ingest = useAdminIngest();
   const [status, setStatus] = useState<EmbeddingsStatusAll | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [purgeModelId, setPurgeModelId] = useState<string | null>(null);
   const [purging, setPurging] = useState(false);
   const outputRef = useRef<HTMLPreElement>(null);
+
+  const running = ingest?.running ?? false;
+  const output = ingest?.output ?? null;
 
   const fetchStatus = useCallback(async () => {
     const res = await fetch("/api/admin/embeddings-status?all=true");
@@ -60,104 +63,17 @@ export function IngestTrigger() {
   }, [fetchStatus]);
 
   useEffect(() => {
+    if (ingest) {
+      ingest.registerOnComplete(fetchStatus);
+      return () => ingest.unregisterOnComplete();
+    }
+  }, [ingest, fetchStatus]);
+
+  useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
   }, [output]);
-
-  const runIngest = useCallback(async () => {
-    if (running) return;
-    setConfirmOpen(false);
-    setRunning(true);
-    setOutput("");
-
-    try {
-      const res = await fetch("/api/admin/ingest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (!res.body) {
-        const data = await res.json().catch(() => ({}));
-        setOutput(data.error ?? "No response body");
-        toast({ type: "error", description: data.error ?? "Ingestion failed" });
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const raw of lines) {
-          const line = raw.trim();
-          if (!line) continue;
-
-          let data: {
-            type: string;
-            line?: string;
-            ok?: boolean;
-            error?: string;
-          };
-          try {
-            data = JSON.parse(line) as typeof data;
-          } catch {
-            continue;
-          }
-
-          if (data.type === "log" && typeof data.line === "string") {
-            const line = data.line;
-            setOutput((prev) => (prev ?? "") + line + "\n");
-          } else if (data.type === "done") {
-            if (data.ok) {
-              toast({ type: "success", description: "Ingestion completed" });
-              await fetchStatus();
-            } else {
-              toast({
-                type: "error",
-                description: data.error ?? "Ingestion failed",
-              });
-            }
-          }
-        }
-      }
-
-      if (buffer.trim()) {
-        try {
-          const data = JSON.parse(buffer.trim()) as {
-            type: string;
-            line?: string;
-            ok?: boolean;
-            error?: string;
-          };
-          if (data.type === "log" && typeof data.line === "string") {
-            const line = data.line;
-            setOutput((prev) => (prev ?? "") + line + "\n");
-          } else if (data.type === "done" && !data.ok) {
-            toast({
-              type: "error",
-              description: data.error ?? "Ingestion failed",
-            });
-          }
-        } catch {
-          // ignore parse errors for trailing buffer
-        }
-      }
-    } catch (err) {
-      setOutput(err instanceof Error ? err.message : "Request failed");
-      toast({ type: "error", description: "Ingestion failed" });
-    } finally {
-      setRunning(false);
-    }
-  }, [running, fetchStatus]);
 
   const handlePurge = useCallback(
     async (modelId: string) => {
@@ -329,7 +245,9 @@ export function IngestTrigger() {
         </p>
         <Button
           disabled={running}
-          onClick={() => setConfirmOpen(true)}
+          onClick={() => {
+            setConfirmOpen(true);
+          }}
           type="button"
         >
           {running ? "Running…" : "Run ingestion"}
@@ -349,7 +267,10 @@ export function IngestTrigger() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <Button
               disabled={running}
-              onClick={() => runIngest()}
+              onClick={() => {
+                setConfirmOpen(false);
+                void ingest?.runIngest();
+              }}
               type="button"
             >
               Run ingestion

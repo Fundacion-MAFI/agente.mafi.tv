@@ -13,7 +13,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAdminDirty } from "./admin-dirty-context";
+import { useAdminIngest } from "./admin-ingest-context";
 
 const NAV_LINKS = [
   { href: "/admin/settings", label: "Settings" },
@@ -25,6 +32,7 @@ const NAV_LINKS = [
 export function AdminNav() {
   const router = useRouter();
   const dirty = useAdminDirty();
+  const ingest = useAdminIngest();
   const [saving, setSaving] = useState(false);
 
   const pendingNav = dirty?.pendingNav ?? null;
@@ -68,9 +76,12 @@ export function AdminNav() {
     [dirty]
   );
 
+  const lastLogLine = ingest?.output?.trim().split("\n").at(-1) ?? null;
+  const progress = ingest?.progress;
+
   return (
     <>
-      <nav className="flex gap-4">
+      <nav className="flex flex-1 items-center gap-4">
         <Link
           className="font-semibold text-foreground hover:underline"
           href="/admin"
@@ -88,6 +99,34 @@ export function AdminNav() {
             {label}
           </Link>
         ))}
+        {ingest?.running && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  className="ml-auto flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2.5 py-1 font-medium text-amber-600 text-sm dark:text-amber-400"
+                  href="/admin/ingest"
+                  onClick={(e) => handleLinkClick(e, "/admin/ingest")}
+                >
+                  <span
+                    aria-hidden
+                    className="size-1.5 animate-pulse rounded-full bg-amber-500"
+                  />
+                  Ingesting{progress ? ` ${progress.current}/${progress.total}` : "…"}
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {lastLogLine ? (
+                  <p className="max-w-xs truncate font-mono text-xs">
+                    {lastLogLine}
+                  </p>
+                ) : (
+                  <p className="text-xs">View progress on Ingest page</p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </nav>
 
       <AlertDialog

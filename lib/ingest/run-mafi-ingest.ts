@@ -208,7 +208,9 @@ export async function runMafiIngest(
         .filter(Boolean);
     }
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      log(onLog, lines, "📊", `${i + 1}/${files.length}`);
       const slug = path.basename(file, path.extname(file));
       processedSlugs.add(slug);
 
