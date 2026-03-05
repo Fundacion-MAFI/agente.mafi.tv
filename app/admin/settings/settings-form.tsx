@@ -152,7 +152,7 @@ export function SettingsForm() {
     if (ingestRunning) return;
     if (
       !confirm(
-        "Run ingestion? This may take several minutes and will update embeddings for all models."
+        "Run ingestion? This may take several minutes and will update embeddings for the selected model."
       )
     ) {
       return;
@@ -319,8 +319,8 @@ export function SettingsForm() {
       <section>
         <h2 className="mb-4 font-medium text-lg">Embedding & Chunking</h2>
         <p className="mb-4 text-muted-foreground text-sm">
-          Embeddings are pre-computed for all models. Switch instantly in admin.
-          Chunk changes require re-ingest.
+          Ingestion populates embeddings for the selected model only. Run
+          ingestion after switching models. Chunk changes require re-ingest.
         </p>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           {embeddingsStatus && (

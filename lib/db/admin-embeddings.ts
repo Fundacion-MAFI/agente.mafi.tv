@@ -4,6 +4,8 @@ import { count } from "drizzle-orm";
 import postgres from "postgres";
 
 import {
+  type EmbeddingModelId,
+  EMBEDDING_MODEL_IDS,
   getEmbeddingDimensions,
   isEmbeddingModelId,
 } from "@/lib/ai/embedding-models";
@@ -84,4 +86,56 @@ export async function getEmbeddingsStatus(
     embeddingCount,
     isReady,
   };
+}
+
+export type ModelStatus = {
+  modelId: EmbeddingModelId;
+  embeddingCount: number;
+  isReady: boolean;
+};
+
+export type EmbeddingsStatusAll = {
+  shotCount: number;
+  activeModel: string;
+  models: ModelStatus[];
+};
+
+export async function getEmbeddingsStatusAll(): Promise<EmbeddingsStatusAll> {
+  const rawModel = await getAdminSetting("embedding.model");
+  const activeModel =
+    typeof rawModel === "string" && isEmbeddingModelId(rawModel)
+      ? rawModel
+      : "openai/text-embedding-3-small";
+
+  const [shotCountResult] = await db
+    .select({ count: count(shots.id) })
+    .from(shots);
+  const shotCount = Number(shotCountResult?.count ?? 0);
+
+  const sql = getSqlClient();
+  const models: ModelStatus[] = [];
+
+  for (const modelId of EMBEDDING_MODEL_IDS) {
+    const dimensions = getEmbeddingDimensions(modelId);
+    const tableName = `shot_embeddings_${dimensions}`;
+
+    if (
+      !EMBEDDING_TABLE_NAMES.includes(
+        tableName as (typeof EMBEDDING_TABLE_NAMES)[number]
+      )
+    ) {
+      models.push({ modelId, embeddingCount: 0, isReady: false });
+      continue;
+    }
+
+    const [row] = await sql.unsafe<[{ count: string }]>(
+      `SELECT COUNT(DISTINCT shot_id)::text AS count FROM ${tableName} WHERE model_id = $1`,
+      [modelId]
+    );
+    const embeddingCount = Number(row?.count ?? 0);
+    const isReady = shotCount > 0 && embeddingCount >= shotCount;
+    models.push({ modelId, embeddingCount, isReady });
+  }
+
+  return { shotCount, activeModel, models };
 }

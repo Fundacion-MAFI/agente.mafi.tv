@@ -1,14 +1,15 @@
 import "server-only";
 
 import crypto from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
-  EMBEDDING_MODEL_IDS,
   type EmbeddingModelId,
   getEmbeddingDimensions,
+  isEmbeddingModelId,
 } from "@/lib/ai/embedding-models";
-import { generateShotEmbeddingsForAllModels } from "@/lib/ai/mafi-embeddings";
+import { generateShotEmbeddings } from "@/lib/ai/mafi-embeddings";
 import { SHOT_EMBEDDING_TABLES, type Shot, shots } from "@/lib/db/schema/shots";
+import { getAdminSetting } from "./admin-settings";
 import { db } from "./queries";
 
 export type ShotInsert = Omit<Shot, "id" | "createdAt" | "updatedAt"> & {
@@ -98,33 +99,36 @@ export async function upsertShotWithEmbeddings(
     .onConflictDoUpdate({ target: shots.slug, set: fields })
     .returning();
 
+  const rawModel = await getAdminSetting("embedding.model");
+  const modelId: EmbeddingModelId =
+    typeof rawModel === "string" && isEmbeddingModelId(rawModel)
+      ? rawModel
+      : "openai/text-embedding-3-small";
+
   const textToEmbed = buildTextToEmbed(upserted);
-  const modelChunks = await generateShotEmbeddingsForAllModels(textToEmbed);
+  const embeddingChunks = await generateShotEmbeddings(textToEmbed, {
+    modelId,
+  });
 
-  await db.transaction(async (tx) => {
-    for (const table of Object.values(SHOT_EMBEDDING_TABLES)) {
-      await tx.delete(table).where(eq(table.shotId, upserted.id));
-    }
+  const dimensions = getEmbeddingDimensions(modelId);
+  const table =
+    SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
 
-    for (const modelId of EMBEDDING_MODEL_IDS) {
-      const chunks = modelChunks[modelId];
-      if (!chunks?.length) continue;
-
-      const dimensions = getEmbeddingDimensions(modelId);
-      const table =
-        SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
-      if (!table) continue;
-
+  if (table && embeddingChunks.length > 0) {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(table)
+        .where(and(eq(table.shotId, upserted.id), eq(table.modelId, modelId)));
       await tx.insert(table).values(
-        chunks.map((chunk) => ({
+        embeddingChunks.map((chunk) => ({
           shotId: upserted.id,
           content: chunk.content,
           embedding: chunk.embedding,
           modelId,
         }))
       );
-    }
-  });
+    });
+  }
 
   return upserted;
 }

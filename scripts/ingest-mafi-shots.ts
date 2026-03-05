@@ -2,16 +2,17 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { config } from "dotenv";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import matter from "gray-matter";
 import postgres from "postgres";
 
 import {
-  EMBEDDING_MODEL_IDS,
+  type EmbeddingModelId,
   getEmbeddingDimensions,
+  isEmbeddingModelId,
 } from "../lib/ai/embedding-models";
-import { generateShotEmbeddingsForAllModels } from "../lib/ai/mafi-embeddings";
+import { generateShotEmbeddings } from "../lib/ai/mafi-embeddings";
 import { SHOT_EMBEDDING_TABLES, shots } from "../lib/db/schema/shots";
 
 // Load env: prefer .env.local for local overrides, fall back to .env
@@ -39,7 +40,13 @@ const INGEST_DEFAULTS = {
 
 async function getIngestConfig(
   sql: ReturnType<typeof postgres>
-): Promise<typeof INGEST_DEFAULTS> {
+): Promise<
+  typeof INGEST_DEFAULTS & { embeddingModel: EmbeddingModelId }
+> {
+  const defaultsWithModel = {
+    ...INGEST_DEFAULTS,
+    embeddingModel: "openai/text-embedding-3-small",
+  };
   try {
     const rows = await sql`
       SELECT key, value FROM admin_settings
@@ -47,7 +54,8 @@ async function getIngestConfig(
         'ingest.throttle_enabled',
         'ingest.throttle_delay_ms',
         'embedding.chunk_size',
-        'embedding.chunk_overlap'
+        'embedding.chunk_overlap',
+        'embedding.model'
       )
     `;
 
@@ -57,6 +65,14 @@ async function getIngestConfig(
         r.value,
       ])
     );
+
+    const rawModel = map["embedding.model"];
+    const embeddingModel =
+      typeof rawModel === "string" &&
+      rawModel.trim().length > 0 &&
+      isEmbeddingModelId(rawModel.trim())
+        ? (rawModel.trim() as EmbeddingModelId)
+        : (defaultsWithModel.embeddingModel as EmbeddingModelId);
 
     const throttle =
       map["ingest.throttle_enabled"] === true ||
@@ -84,10 +100,12 @@ async function getIngestConfig(
       throttleDelayMs: delay,
       chunkSize: chunk,
       chunkOverlap: overlap,
+      embeddingModel,
     };
   } catch {
     return {
       ...INGEST_DEFAULTS,
+      embeddingModel: defaultsWithModel.embeddingModel as EmbeddingModelId,
       throttleEnabled:
         process.env.INGEST_THROTTLE_EMBEDDINGS === "1" ||
         process.env.INGEST_THROTTLE_EMBEDDINGS === "true" ||
@@ -172,7 +190,11 @@ function normalizeTags(raw: ShotFrontMatter["tags"]): string[] {
 
 async function upsertShotFromFile(
   relativePath: string,
-  embeddingOptions: { chunkSize: number; chunkOverlap: number }
+  embeddingOptions: {
+    chunkSize: number;
+    chunkOverlap: number;
+    embeddingModel: EmbeddingModelId;
+  }
 ) {
   const fullPath = path.join(dataDirectory, relativePath);
   const fileContent = await fs.readFile(fullPath, "utf8");
@@ -233,33 +255,32 @@ async function upsertShotFromFile(
     .filter(Boolean)
     .join("\n\n");
 
-  const modelChunks = await generateShotEmbeddingsForAllModels(textToEmbed, {
+  const embeddingChunks = await generateShotEmbeddings(textToEmbed, {
     chunkSize: embeddingOptions.chunkSize,
     chunkOverlap: embeddingOptions.chunkOverlap,
+    modelId: embeddingOptions.embeddingModel,
   });
 
+  const modelId = embeddingOptions.embeddingModel;
+  const dimensions = getEmbeddingDimensions(modelId);
+  const table =
+    SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
+
   await db.transaction(async (tx) => {
-    for (const table of Object.values(SHOT_EMBEDDING_TABLES)) {
-      await tx.delete(table).where(eq(table.shotId, upserted.id));
-    }
-
-    for (const modelId of EMBEDDING_MODEL_IDS) {
-      const chunks = modelChunks[modelId];
-      if (!chunks?.length) continue;
-
-      const dimensions = getEmbeddingDimensions(modelId);
-      const table =
-        SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
-      if (!table) continue;
-
-      await tx.insert(table).values(
-        chunks.map((chunk) => ({
-          shotId: upserted.id,
-          content: chunk.content,
-          embedding: chunk.embedding,
-          modelId,
-        }))
-      );
+    if (table) {
+      await tx
+        .delete(table)
+        .where(and(eq(table.shotId, upserted.id), eq(table.modelId, modelId)));
+      if (embeddingChunks.length > 0) {
+        await tx.insert(table).values(
+          embeddingChunks.map((chunk) => ({
+            shotId: upserted.id,
+            content: chunk.content,
+            embedding: chunk.embedding,
+            modelId,
+          }))
+        );
+      }
     }
   });
 
@@ -290,7 +311,7 @@ async function main() {
   const ingestConfig = await getIngestConfig(sqlClient);
 
   console.log("📼 Ingesting MAFI shots from", dataDirectory);
-  console.log("   Embedding for all", EMBEDDING_MODEL_IDS.length, "models");
+  console.log("   Embedding model:", ingestConfig.embeddingModel);
   const files = await getMarkdownFiles();
   const processedSlugs = new Set<string>();
   let embeddingsUpdated = 0;
@@ -307,6 +328,7 @@ async function main() {
     const result = await upsertShotFromFile(file, {
       chunkSize: ingestConfig.chunkSize,
       chunkOverlap: ingestConfig.chunkOverlap,
+      embeddingModel: ingestConfig.embeddingModel,
     });
     if (result.updatedEmbeddings) {
       embeddingsUpdated += 1;

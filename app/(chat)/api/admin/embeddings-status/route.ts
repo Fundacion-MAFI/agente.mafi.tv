@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
-import { getEmbeddingsStatus } from "@/lib/db/admin-embeddings";
+import {
+  getEmbeddingsStatus,
+  getEmbeddingsStatusAll,
+} from "@/lib/db/admin-embeddings";
 
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
@@ -13,6 +16,11 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
+    const all = searchParams.get("all") === "1" || searchParams.get("all") === "true";
+    if (all) {
+      const status = await getEmbeddingsStatusAll();
+      return NextResponse.json(status);
+    }
     const model = searchParams.get("model") ?? undefined;
     const status = await getEmbeddingsStatus(model);
     return NextResponse.json(status);
