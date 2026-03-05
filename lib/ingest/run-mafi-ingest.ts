@@ -70,8 +70,8 @@ export async function runMafiIngest(
   const {
     prune = false,
     dataDirectory = path.join(process.cwd(), "data", "mafi-shots"),
-    connectionString =
-      process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL,
+    connectionString = process.env.POSTGRES_URL_NON_POOLING ??
+      process.env.POSTGRES_URL,
     onLog,
   } = options;
 

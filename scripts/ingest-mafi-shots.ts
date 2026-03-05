@@ -1,5 +1,5 @@
-import { config } from "dotenv";
 import path from "node:path";
+import { config } from "dotenv";
 
 import { runMafiIngest } from "../lib/ingest/run-mafi-ingest";
 

@@ -4,8 +4,8 @@ import { count } from "drizzle-orm";
 import postgres from "postgres";
 
 import {
-  type EmbeddingModelId,
   EMBEDDING_MODEL_IDS,
+  type EmbeddingModelId,
   getEmbeddingDimensions,
   isEmbeddingModelId,
 } from "@/lib/ai/embedding-models";

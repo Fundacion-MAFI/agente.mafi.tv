@@ -36,15 +36,7 @@ export const shots = pgTable(
 
 export type Shot = InferSelectModel<typeof shots>;
 
-const EMBEDDING_DIMENSIONS = [
-  384,
-  768,
-  1024,
-  1536,
-  2560,
-  3072,
-  4096,
-] as const;
+const EMBEDDING_DIMENSIONS = [384, 768, 1024, 1536, 2560, 3072, 4096] as const;
 
 function createEmbeddingTableWithIndex(
   dim: (typeof EMBEDDING_DIMENSIONS)[number]
@@ -63,7 +55,9 @@ function createEmbeddingTableWithIndex(
     },
     (table) => ({
       shotIdIdx: index(`shot_embeddings_${dim}_shot_id_idx`).on(table.shotId),
-      modelIdIdx: index(`shot_embeddings_${dim}_model_id_idx`).on(table.modelId),
+      modelIdIdx: index(`shot_embeddings_${dim}_model_id_idx`).on(
+        table.modelId
+      ),
       embeddingIndex: index(`shot_embeddings_${dim}_embedding_idx`).using(
         "hnsw",
         table.embedding.op("vector_cosine_ops")
@@ -89,7 +83,9 @@ function createEmbeddingTableNoVectorIndex(
     },
     (table) => ({
       shotIdIdx: index(`shot_embeddings_${dim}_shot_id_idx`).on(table.shotId),
-      modelIdIdx: index(`shot_embeddings_${dim}_model_id_idx`).on(table.modelId),
+      modelIdIdx: index(`shot_embeddings_${dim}_model_id_idx`).on(
+        table.modelId
+      ),
     })
   );
 }

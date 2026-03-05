@@ -90,7 +90,12 @@ export function IngestTrigger() {
           const line = raw.trim();
           if (!line) continue;
 
-          let data: { type: string; line?: string; ok?: boolean; error?: string };
+          let data: {
+            type: string;
+            line?: string;
+            ok?: boolean;
+            error?: string;
+          };
           try {
             data = JSON.parse(line) as typeof data;
           } catch {
@@ -158,10 +163,10 @@ export function IngestTrigger() {
             <tbody>
               {status.models.map((m) => (
                 <tr
-                  key={m.modelId}
                   className={`border-b last:border-b-0 ${
                     m.modelId === status.activeModel ? "bg-muted/30" : ""
                   }`}
+                  key={m.modelId}
                 >
                   <td className="px-4 py-2">
                     <span className="font-medium">
@@ -175,7 +180,7 @@ export function IngestTrigger() {
                   </td>
                   <td className="px-4 py-2">
                     <span
-                      className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-flex rounded px-2 py-0.5 font-medium text-xs ${
                         m.isReady
                           ? "bg-green-500/10 text-green-600 dark:text-green-400"
                           : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
@@ -209,8 +214,8 @@ export function IngestTrigger() {
 
       {(running || output) && (
         <pre
-          ref={outputRef}
           className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-input bg-muted p-4 text-muted-foreground text-xs"
+          ref={outputRef}
         >
           {output || (running ? "Starting…" : "")}
         </pre>

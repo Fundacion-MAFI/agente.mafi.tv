@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import {
   AlertDialog,
@@ -24,20 +24,22 @@ const NAV_LINKS = [
 
 export function AdminNav() {
   const router = useRouter();
-  const pathname = usePathname();
   const dirty = useAdminDirty();
-  const [pendingNav, setPendingNav] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const isOnSettingsPage = pathname === "/admin/settings";
-  const shouldIntercept = isOnSettingsPage && dirty?.isDirty;
+  const pendingNav = dirty?.pendingNav ?? null;
+  const setPendingNav =
+    dirty?.setPendingNav ??
+    ((_href: string | null) => {
+      void _href;
+    });
 
   const navigateTo = useCallback(
     (href: string) => {
       setPendingNav(null);
       router.push(href);
     },
-    [router]
+    [router, setPendingNav]
   );
 
   const handleSaveAndNavigate = useCallback(async () => {
@@ -60,11 +62,10 @@ export function AdminNav() {
 
   const handleLinkClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-      if (!shouldIntercept) return;
       e.preventDefault();
-      setPendingNav(href);
+      dirty?.requestNavigation(href);
     },
-    [shouldIntercept]
+    [dirty]
   );
 
   return (

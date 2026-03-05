@@ -27,9 +27,7 @@ export async function POST(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       const onLog = (line: string) => {
-        controller.enqueue(
-          streamNdjsonLine(encoder, { type: "log", line })
-        );
+        controller.enqueue(streamNdjsonLine(encoder, { type: "log", line }));
       };
 
       try {

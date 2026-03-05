@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -15,12 +16,17 @@ type AdminDirtyContextValue = {
   onSaveRequest: (() => Promise<void>) | null;
   registerSaveHandler: (handler: () => Promise<void>) => void;
   unregisterSaveHandler: () => void;
+  pendingNav: string | null;
+  setPendingNav: (href: string | null) => void;
+  requestNavigation: (href: string) => void;
 };
 
 const AdminDirtyContext = createContext<AdminDirtyContextValue | null>(null);
 
 export function AdminDirtyProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [isDirty, setDirty] = useState(false);
+  const [pendingNav, setPendingNav] = useState<string | null>(null);
   const [saveHandler, setSaveHandler] = useState<(() => Promise<void>) | null>(
     null
   );
@@ -33,6 +39,17 @@ export function AdminDirtyProvider({ children }: { children: ReactNode }) {
     setSaveHandler(null);
   }, []);
 
+  const requestNavigation = useCallback(
+    (href: string) => {
+      if (isDirty) {
+        setPendingNav(href);
+      } else {
+        router.push(href);
+      }
+    },
+    [isDirty, router]
+  );
+
   const value = useMemo<AdminDirtyContextValue>(
     () => ({
       isDirty,
@@ -40,8 +57,18 @@ export function AdminDirtyProvider({ children }: { children: ReactNode }) {
       onSaveRequest: saveHandler,
       registerSaveHandler,
       unregisterSaveHandler,
+      pendingNav,
+      setPendingNav,
+      requestNavigation,
     }),
-    [isDirty, saveHandler, registerSaveHandler, unregisterSaveHandler]
+    [
+      isDirty,
+      saveHandler,
+      registerSaveHandler,
+      unregisterSaveHandler,
+      pendingNav,
+      requestNavigation,
+    ]
   );
 
   return (

@@ -108,19 +108,16 @@ export function SettingsForm() {
   const [ingestRunning, setIngestRunning] = useState(false);
   const saveHandlerRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
-  const fetchEmbeddingsStatus = useCallback(
-    async (model?: string) => {
-      const params = model ? `?model=${encodeURIComponent(model)}` : "";
-      const res = await fetch(`/api/admin/embeddings-status${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEmbeddingsStatus(data);
-      } else {
-        setEmbeddingsStatus(null);
-      }
-    },
-    []
-  );
+  const fetchEmbeddingsStatus = useCallback(async (model?: string) => {
+    const params = model ? `?model=${encodeURIComponent(model)}` : "";
+    const res = await fetch(`/api/admin/embeddings-status${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      setEmbeddingsStatus(data);
+    } else {
+      setEmbeddingsStatus(null);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -325,7 +322,7 @@ export function SettingsForm() {
         <div className="mb-4 flex flex-wrap items-center gap-3">
           {embeddingsStatus && (
             <span
-              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium ${
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm ${
                 embeddingsStatus.isReady
                   ? "bg-green-500/10 text-green-600 dark:text-green-400"
                   : "bg-amber-500/10 text-amber-600 dark:text-amber-400"

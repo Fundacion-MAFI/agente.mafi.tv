@@ -1,12 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAdminDirty } from "@/app/admin/admin-dirty-context";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+function normalizeTagsForCompare(tags: string | string[]): string {
+  const arr = (
+    typeof tags === "string"
+      ? tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : (tags ?? []).map((t) => String(t).trim()).filter(Boolean)
+  ).sort();
+  return arr.join(",");
+}
 
 function extractVimeoId(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
@@ -42,10 +54,12 @@ export function ShotEditForm({
   initialData: ShotData | null;
 }) {
   const router = useRouter();
+  const dirtyContext = useAdminDirty();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const saveHandlerRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
-  const [form, setForm] = useState({
+  const initialForm = {
     slug: slug ?? "",
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
@@ -56,32 +70,69 @@ export function ShotEditForm({
     author: initialData?.author ?? "",
     geotag: initialData?.geotag ?? "",
     tags: (initialData?.tags ?? []).join(", "),
-  });
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [form, setForm] = useState(initialForm);
+
+  const isDirty =
+    form.slug !== initialForm.slug ||
+    form.title !== initialForm.title ||
+    form.description !== initialForm.description ||
+    form.historicContext !== initialForm.historicContext ||
+    form.vimeoUrl !== initialForm.vimeoUrl ||
+    form.date !== initialForm.date ||
+    form.place !== initialForm.place ||
+    form.author !== initialForm.author ||
+    form.geotag !== initialForm.geotag ||
+    normalizeTagsForCompare(form.tags) !==
+      normalizeTagsForCompare(initialForm.tags);
+
+  useEffect(() => {
+    dirtyContext?.setDirty(isDirty);
+  }, [isDirty, dirtyContext]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  const registerSaveHandler = dirtyContext?.registerSaveHandler;
+  const unregisterSaveHandler = dirtyContext?.unregisterSaveHandler;
+  const clearDirty = dirtyContext?.setDirty;
+  useEffect(() => {
+    registerSaveHandler?.(() => saveHandlerRef.current());
+    return () => {
+      unregisterSaveHandler?.();
+      clearDirty?.(false);
+    };
+  }, [registerSaveHandler, unregisterSaveHandler, clearDirty]);
+
+  const doSave = async (): Promise<string | undefined> => {
     setSaving(true);
     setError(null);
-
-    const tags = form.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const payload = {
-      slug: form.slug || undefined,
-      title: form.title,
-      description: form.description || null,
-      historicContext: form.historicContext || null,
-      vimeoUrl: form.vimeoUrl || null,
-      date: form.date || null,
-      place: form.place || null,
-      author: form.author || null,
-      geotag: form.geotag || null,
-      tags,
-    };
-
     try {
+      const tags = form.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      const payload = {
+        slug: form.slug || undefined,
+        title: form.title,
+        description: form.description || null,
+        historicContext: form.historicContext || null,
+        vimeoUrl: form.vimeoUrl || null,
+        date: form.date || null,
+        place: form.place || null,
+        author: form.author || null,
+        geotag: form.geotag || null,
+        tags,
+      };
+
       if (slug) {
         const res = await fetch(`/api/admin/shots/${slug}`, {
           method: "PATCH",
@@ -95,29 +146,47 @@ export function ShotEditForm({
         if (data.warning) {
           toast({ type: "warning", description: data.warning });
         }
-        router.push("/admin/shots");
-        router.refresh();
-      } else {
-        const finalSlug = form.slug.trim() || "new-shot";
-        const res = await fetch("/api/admin/shots", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, slug: finalSlug }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error ?? "Failed to create");
-        }
-        if (data.warning) {
-          toast({ type: "warning", description: data.warning });
-        }
-        router.push(`/admin/shots/${data.slug}`);
-        router.refresh();
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed");
+
+      const finalSlug = form.slug.trim() || "new-shot";
+      const res = await fetch("/api/admin/shots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, slug: finalSlug }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to create");
+      }
+      if (data.warning) {
+        toast({ type: "warning", description: data.warning });
+      }
+      return data.slug as string;
     } finally {
       setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    saveHandlerRef.current = async () => {
+      await doSave();
+    };
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const newSlug = await doSave();
+      dirtyContext?.setDirty(false);
+      if (slug) {
+        router.push("/admin/shots");
+      } else {
+        router.push(`/admin/shots/${newSlug ?? "new-shot"}`);
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed");
     }
   };
 
@@ -291,11 +360,13 @@ export function ShotEditForm({
         <Button disabled={saving} type="submit">
           {saving ? "Saving…" : slug ? "Update" : "Create"}
         </Button>
-        <Link href="/admin/shots">
-          <Button type="button" variant="outline">
-            Cancel
-          </Button>
-        </Link>
+        <Button
+          onClick={() => dirtyContext?.requestNavigation("/admin/shots")}
+          type="button"
+          variant="outline"
+        >
+          Cancel
+        </Button>
         {slug && (
           <Button
             disabled={saving}
