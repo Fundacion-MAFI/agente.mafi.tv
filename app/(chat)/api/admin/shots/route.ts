@@ -74,7 +74,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const shot = await upsertShotWithEmbeddings({
+    const { shot, modelId } = await upsertShotWithEmbeddings({
       slug: slugSafe,
       title: title.trim(),
       description: body.description ?? null,
@@ -89,7 +89,10 @@ export async function POST(request: Request) {
       tags: body.tags ?? [],
     });
 
-    return NextResponse.json(shot, { status: 201 });
+    return NextResponse.json(
+      { ...shot, embeddingModel: modelId },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Admin create shot error:", error);
     return NextResponse.json(

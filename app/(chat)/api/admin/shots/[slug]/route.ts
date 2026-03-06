@@ -103,8 +103,8 @@ export async function PATCH(
   };
 
   try {
-    const shot = await upsertShotWithEmbeddings(updates);
-    return NextResponse.json(shot);
+    const { shot, modelId } = await upsertShotWithEmbeddings(updates);
+    return NextResponse.json({ ...shot, embeddingModel: modelId });
   } catch (error) {
     console.error("Admin update shot error:", error);
     return NextResponse.json(

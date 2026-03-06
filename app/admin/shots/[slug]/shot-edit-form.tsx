@@ -20,6 +20,17 @@ function normalizeTagsForCompare(tags: string | string[]): string {
   return arr.join(",");
 }
 
+const EMBEDDING_MODEL_LABELS: Record<string, string> = {
+  "openai/text-embedding-3-small": "OpenAI 3 Small",
+  "openai/text-embedding-3-large": "OpenAI 3 Large",
+  "mistral/mistral-embed": "Mistral Embed",
+  "google/gemini-embedding-001": "Google Gemini",
+  "google/text-multilingual-embedding-002": "Google Multilingual 002",
+  "google/text-embedding-005": "Google Embedding 005",
+  "alibaba/qwen3-embedding-4b": "Alibaba Qwen3 4B",
+  "amazon/titan-embed-text-v2": "Amazon Titan v2",
+};
+
 function extractVimeoId(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
   try {
@@ -156,6 +167,15 @@ export function ShotEditForm({
         }
         if (data.warning) {
           toast({ type: "warning", description: data.warning });
+        } else {
+          const modelLabel =
+            typeof data.embeddingModel === "string"
+              ? EMBEDDING_MODEL_LABELS[data.embeddingModel] ?? data.embeddingModel
+              : "selected model";
+          toast({
+            type: "success",
+            description: `Shot updated & embeddings regenerated for ${modelLabel}.`,
+          });
         }
         return;
       }
@@ -172,6 +192,15 @@ export function ShotEditForm({
       }
       if (data.warning) {
         toast({ type: "warning", description: data.warning });
+      } else {
+        const modelLabel =
+          typeof data.embeddingModel === "string"
+            ? EMBEDDING_MODEL_LABELS[data.embeddingModel] ?? data.embeddingModel
+            : "selected model";
+        toast({
+          type: "success",
+          description: `Shot created & embeddings generated for ${modelLabel}.`,
+        });
       }
       return data.slug as string;
     } finally {

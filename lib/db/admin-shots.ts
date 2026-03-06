@@ -74,7 +74,7 @@ export async function getShotBySlug(slug: string): Promise<Shot | null> {
 
 export async function upsertShotWithEmbeddings(
   data: Omit<ShotInsert, "checksum"> & { checksum?: string }
-): Promise<Shot> {
+): Promise<{ shot: Shot; modelId: string }> {
   const checksum = data.checksum ?? computeShotChecksum(data);
   const now = new Date();
 
@@ -132,7 +132,7 @@ export async function upsertShotWithEmbeddings(
     });
   }
 
-  return upserted;
+  return { shot: upserted, modelId };
 }
 
 export async function deleteShotBySlug(slug: string): Promise<Shot | null> {
