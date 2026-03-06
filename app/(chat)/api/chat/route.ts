@@ -1,12 +1,7 @@
-import { geolocation } from "@vercel/functions";
 import {
-  convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
-  smoothStream,
-  stepCountIs,
   streamObject,
-  streamText,
   type UIMessageStreamWriter,
 } from "ai";
 import { unstable_cache as cache } from "next/cache";
@@ -21,7 +16,7 @@ import { getUsage } from "tokenlens/helpers";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { getEntitlementsForUserType } from "@/lib/ai/entitlements";
-import { getAgenteFilmicoPrompt, getSystemPrompt } from "@/lib/ai/get-prompts";
+import { getAgenteFilmicoPrompt } from "@/lib/ai/get-prompts";
 import {
   ArchivoTimeoutError,
   type RetrievedShot,
@@ -29,12 +24,7 @@ import {
 } from "@/lib/ai/mafi-retrieval";
 import { type MafiAnswer, mafiAnswerSchema } from "@/lib/ai/mafi-schema";
 import type { ChatModel } from "@/lib/ai/models";
-import type { RequestHints } from "@/lib/ai/prompts";
 import { myProvider } from "@/lib/ai/providers";
-import { createDocument } from "@/lib/ai/tools/create-document";
-import { getWeather } from "@/lib/ai/tools/get-weather";
-import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { updateDocument } from "@/lib/ai/tools/update-document";
 import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
 import {
   isProductionEnvironment,
@@ -57,11 +47,7 @@ import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
-import {
-  convertToUIMessages,
-  generateUUID,
-  getTextFromMessage,
-} from "@/lib/utils";
+import { generateUUID, getTextFromMessage } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
@@ -527,17 +513,6 @@ export async function POST(request: Request) {
       // New chat - no need to fetch messages, it's empty
     }
 
-    const uiMessages = [...convertToUIMessages(messagesFromDb), message];
-
-    const { longitude, latitude, city, country } = geolocation(request);
-
-    const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
-    };
-
     await saveMessages({
       messages: [
         {
@@ -556,26 +531,20 @@ export async function POST(request: Request) {
 
     const [
       archivoPrompt,
-      systemPromptStr,
       retrievalTimeoutMs,
       playlistTimeoutMs,
       retrievalLimit,
-      stepCount,
     ] = await Promise.all([
       getAgenteFilmicoPrompt(),
-      getSystemPrompt(requestHints),
       getAdminSetting("chat.archivo_retrieval_timeout_ms"),
       getAdminSetting("chat.archivo_playlist_timeout_ms"),
       getAdminSetting("retrieval.k"),
-      getAdminSetting("chat.step_count"),
     ]);
 
     const archivoRetrievalTimeoutMs =
       typeof retrievalTimeoutMs === "number" ? retrievalTimeoutMs : 12_000;
     const archivoPlaylistTimeoutMs =
       typeof playlistTimeoutMs === "number" ? playlistTimeoutMs : 28_000;
-    const stepCountLimit =
-      typeof stepCount === "number" && stepCount >= 1 ? stepCount : 5;
     const archivoRetrievalLimit =
       typeof retrievalLimit === "number" && retrievalLimit >= 1
         ? retrievalLimit
@@ -583,7 +552,6 @@ export async function POST(request: Request) {
 
     let finalMergedUsage: AppUsage | undefined;
 
-    const isArchivoMode = message.mode === "archivo";
     const DEFAULT_ARCHIVO_MODEL_ID: ChatModel["id"] = "film-agent";
     const allowedArchivoModels = new Set<ChatModel["id"]>([
       DEFAULT_ARCHIVO_MODEL_ID,
@@ -784,78 +752,8 @@ export async function POST(request: Request) {
     };
 
     const stream = createUIMessageStream({
-      execute: ({ writer: dataStream }) => {
-        if (isArchivoMode) {
-          return handleArchivoRequest(dataStream);
-        }
-
-        const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
-          system: systemPromptStr,
-          messages: convertToModelMessages(uiMessages),
-          stopWhen: stepCountIs(stepCountLimit),
-          experimental_activeTools: [
-            "getWeather",
-            "createDocument",
-            "updateDocument",
-            "requestSuggestions",
-          ],
-          experimental_transform: smoothStream({ chunking: "word" }),
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
-          },
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-          onFinish: async ({ usage }) => {
-            try {
-              const providers = await getTokenlensCatalog();
-              const modelId =
-                myProvider.languageModel(selectedChatModel).modelId;
-              if (!modelId) {
-                finalMergedUsage = usage;
-                dataStream.write({
-                  type: "data-usage",
-                  data: finalMergedUsage,
-                });
-                return;
-              }
-
-              if (!providers) {
-                finalMergedUsage = usage;
-                dataStream.write({
-                  type: "data-usage",
-                  data: finalMergedUsage,
-                });
-                return;
-              }
-
-              const summary = getUsage({ modelId, usage, providers });
-              finalMergedUsage = { ...usage, ...summary, modelId } as AppUsage;
-              dataStream.write({ type: "data-usage", data: finalMergedUsage });
-            } catch (err) {
-              console.warn("TokenLens enrichment failed", err);
-              finalMergedUsage = usage;
-              dataStream.write({ type: "data-usage", data: finalMergedUsage });
-            }
-          },
-        });
-
-        result.consumeStream();
-
-        dataStream.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          })
-        );
-      },
+      execute: ({ writer: dataStream }) =>
+        handleArchivoRequest(dataStream),
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
         await saveMessages({

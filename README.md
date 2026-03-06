@@ -80,15 +80,10 @@ The main chat API route:
 // app/(chat)/api/chat/route.ts
 ```
 
-orchestrates both flows:
+orchestrates the Agente Fílmico flow:
 
 * **Archivo mode**
   Streams an object response for the playlist and writes an artifact to the database.
-
-* **Regular chat mode**
-  Streams chat completions (with tool calls) without touching the archive.
-
-Because these flows are isolated, you can swap corpora, adjust prompts, or turn Archivo mode off while keeping the same UI and routing.
 
 ---
 

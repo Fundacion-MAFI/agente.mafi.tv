@@ -1,6 +1,6 @@
 import type { MessageMode } from "../types";
 
-export const DEFAULT_CHAT_MODEL: string = "chat-model";
+export const FILM_AGENT_MODEL: string = "film-agent";
 
 export type ChatModel = {
   id: string;
@@ -10,11 +10,6 @@ export type ChatModel = {
 };
 
 export const chatModels: ChatModel[] = [
-  {
-    id: "chat-model",
-    name: "OpenAI GPT-4o mini",
-    description: "Modelo multimodal veloz para conversaciones generales.",
-  },
   {
     id: "film-agent",
     name: "Agente Fílmico",

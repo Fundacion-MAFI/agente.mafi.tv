@@ -20,11 +20,11 @@ import {
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { FILM_AGENT_MODEL } from "@/lib/ai/models";
 import { STREAM_TROUBLESHOOTING_MESSAGE } from "@/lib/constants";
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
-import type { Attachment, ChatMessage, MessageMode } from "@/lib/types";
+import type { Attachment, ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
 import { Artifact } from "./artifact";
@@ -52,7 +52,6 @@ type TelemetryCapableWindow = typeof window & {
 export function Chat({
   id,
   initialMessages,
-  initialChatModel,
   initialVisibilityType,
   isReadonly,
   autoResume,
@@ -60,7 +59,6 @@ export function Chat({
 }: {
   id: string;
   initialMessages: ChatMessage[];
-  initialChatModel: string;
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
   autoResume: boolean;
@@ -75,16 +73,12 @@ export function Chat({
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState<string>("");
-  const initialMode: MessageMode =
-    initialChatModel === "film-agent" ? "archivo" : "default";
+  const selectedChatModel = FILM_AGENT_MODEL;
+  const selectedChatModelRef = useRef(selectedChatModel);
 
   const [usage, setUsage] = useState<AppUsage | undefined>(initialLastContext);
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
   const [showStreamWatchdogAlert, setShowStreamWatchdogAlert] = useState(false);
-  const [messageMode, setMessageMode] = useState<MessageMode>(initialMode);
-  const selectedChatModel =
-    messageMode === "archivo" ? "film-agent" : DEFAULT_CHAT_MODEL;
-  const selectedChatModelRef = useRef(selectedChatModel);
   const [lastStreamActivityAt, setLastStreamActivityAt] = useState<
     number | null
   >(null);
@@ -95,10 +89,6 @@ export function Chat({
   useEffect(() => {
     selectedChatModelRef.current = selectedChatModel;
   }, [selectedChatModel]);
-
-  const handleModeChange = useCallback((mode: MessageMode) => {
-    setMessageMode(mode);
-  }, []);
 
   const {
     messages,
@@ -262,7 +252,7 @@ export function Chat({
     setShowStreamWatchdogAlert(false);
     sendMessage({
       role: "user",
-      mode: lastUserMessage.mode ?? "default",
+      mode: "archivo",
       parts: lastUserMessage.parts,
     });
   }, [messages, sendMessage]);
@@ -280,7 +270,7 @@ export function Chat({
     if (query && !hasAppendedQuery) {
       sendMessage({
         role: "user" as const,
-        mode: "default",
+        mode: "archivo",
         parts: [{ type: "text", text: query }],
       });
 
@@ -330,9 +320,7 @@ export function Chat({
               attachments={attachments}
               chatId={id}
               input={input}
-              messageMode={messageMode}
               messages={messages}
-              onModeChange={handleModeChange}
               selectedVisibilityType={visibilityType}
               sendMessage={sendMessage}
               setAttachments={setAttachments}
@@ -351,9 +339,7 @@ export function Chat({
         chatId={id}
         input={input}
         isReadonly={isReadonly}
-        messageMode={messageMode}
         messages={messages}
-        onModeChange={setMessageMode}
         regenerate={regenerate}
         selectedVisibilityType={visibilityType}
         sendMessage={sendMessage}

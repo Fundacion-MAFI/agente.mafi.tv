@@ -18,7 +18,6 @@ export default async function Page() {
       <Chat
         autoResume={false}
         id={id}
-        initialChatModel="film-agent"
         initialMessages={[]}
         initialVisibilityType="public"
         isReadonly={false}

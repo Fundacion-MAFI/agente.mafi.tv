@@ -1,6 +1,7 @@
 "use client";
 
 import equal from "fast-deep-equal";
+import Image from "next/image";
 import {
   type MouseEvent,
   memo,
@@ -8,9 +9,11 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import useSWR from "swr";
 import { useArtifact } from "@/hooks/use-artifact";
+import { safeParseMafiPlaylistDocument } from "@/lib/artifacts/mafi-playlist";
 import type { Document } from "@/lib/db/schema";
 import { cn, fetcher } from "@/lib/utils";
 import type { ArtifactKind, UIArtifact } from "./artifact";
@@ -21,6 +24,23 @@ import { FileIcon, FullscreenIcon, ImageIcon, LoaderIcon } from "./icons";
 import { ImageEditor } from "./image-editor";
 import { SpreadsheetEditor } from "./sheet-editor";
 import { Editor } from "./text-editor";
+
+const ACCENT_CARD_VARS = [
+  "var(--accent-card-1)",
+  "var(--accent-card-2)",
+  "var(--accent-card-3)",
+  "var(--accent-card-4)",
+  "var(--accent-card-5)",
+] as const;
+
+function getAccentIndexForId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash) % ACCENT_CARD_VARS.length;
+}
 
 type DocumentPreviewProps = {
   isReadonly: boolean;
@@ -101,8 +121,14 @@ export function DocumentPreview({
     return <LoadingSkeleton artifactKind={artifact.kind} />;
   }
 
+  const accentIndex = getAccentIndexForId(document.id);
+  const accentBg = ACCENT_CARD_VARS[accentIndex];
+
   return (
-    <div className="relative w-full cursor-pointer">
+    <div
+      className="relative w-full cursor-pointer overflow-hidden rounded-[var(--radius-input)]"
+      style={{ backgroundColor: accentBg }}
+    >
       <HitboxLayer
         hitboxRef={hitboxRef}
         result={result}
@@ -212,7 +238,7 @@ const PureDocumentHeader = ({
   kind: ArtifactKind;
   isStreaming: boolean;
 }) => (
-  <div className="flex flex-row items-start justify-between gap-2 rounded-t-2xl border border-b-0 p-4 sm:items-center dark:border-zinc-700 dark:bg-muted">
+  <div className="flex flex-row items-start justify-between gap-2 rounded-t-[var(--radius-input)] p-4 sm:items-center">
     <div className="flex flex-row items-start gap-3 sm:items-center">
       <div className="text-muted-foreground">
         {isStreaming ? (
@@ -246,10 +272,11 @@ const DocumentContent = ({ document }: { document: Document }) => {
   const { artifact } = useArtifact();
 
   const containerClassName = cn(
-    "h-[275px] overflow-y-scroll rounded-b-2xl border border-t-0 dark:border-zinc-700 dark:bg-muted",
+    "h-[275px] overflow-x-hidden overflow-y-auto rounded-b-[var(--radius-input)]",
     {
       "p-4 sm:px-14 sm:py-16": document.kind === "text",
       "p-0": document.kind === "code",
+      "p-2": document.kind === "mafi-playlist",
     }
   );
 
@@ -263,6 +290,15 @@ const DocumentContent = ({ document }: { document: Document }) => {
   };
 
   const handleSaveContent = () => null;
+
+  if (document.kind === "mafi-playlist") {
+    return (
+      <MafiPlaylistPreview
+        className={containerClassName}
+        content={document.content ?? ""}
+      />
+    );
+  }
 
   return (
     <div className={containerClassName}>
@@ -293,3 +329,88 @@ const DocumentContent = ({ document }: { document: Document }) => {
     </div>
   );
 };
+
+function ShotThumbnail({
+  slug,
+  title,
+}: {
+  slug: string;
+  title: string;
+}) {
+  const [error, setError] = useState(false);
+  const thumbSrc = `/images/shots/${slug}.webp`;
+
+  if (error) {
+    return (
+      <div
+        className="flex min-w-0 flex-1 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-border bg-muted text-muted-foreground"
+        title={title}
+      >
+        <FileIcon />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative min-w-0 flex-1 overflow-hidden rounded-[var(--radius-sm)] border border-border bg-muted"
+      title={title}
+    >
+      <Image
+        alt={title}
+        className="object-cover"
+        fill
+        onError={() => setError(true)}
+        sizes="(max-width: 768px) 50vw, 200px"
+        src={thumbSrc}
+        unoptimized
+      />
+    </div>
+  );
+}
+
+function MafiPlaylistPreview({
+  content,
+  className,
+}: {
+  content: string;
+  className?: string;
+}) {
+  const parsed = useMemo(
+    () => safeParseMafiPlaylistDocument(content),
+    [content]
+  );
+
+  if (!parsed || parsed.playlist.length === 0) {
+    return (
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm",
+          className
+        )}
+      >
+        <p>Playlist en construcción…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex h-full w-full flex-row gap-2",
+        className
+      )}
+    >
+      {parsed.playlist.slice(0, 6).map((entry, index) => {
+        const slug = entry.slug ?? String(index + 1);
+        return (
+          <ShotThumbnail
+            key={`${slug}-${index}`}
+            slug={slug}
+            title={entry.title}
+          />
+        );
+      })}
+    </div>
+  );
+}

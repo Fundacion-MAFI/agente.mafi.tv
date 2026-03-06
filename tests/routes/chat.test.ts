@@ -46,7 +46,7 @@ test.describe
         data: {
           id: chatId,
           message: TEST_PROMPTS.SKY.MESSAGE,
-          selectedChatModel: "chat-model",
+          selectedChatModel: "film-agent",
           selectedVisibilityType: "private",
         },
       });
@@ -75,7 +75,7 @@ test.describe
         data: {
           id: chatId,
           message: TEST_PROMPTS.GRASS.MESSAGE,
-          selectedChatModel: "chat-model",
+          selectedChatModel: "film-agent",
           selectedVisibilityType: "private",
         },
       });
@@ -129,7 +129,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
-            mode: "default",
+            mode: "archivo",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -139,7 +139,7 @@ test.describe
             ],
             createdAt: new Date().toISOString(),
           },
-          selectedChatModel: "chat-model",
+          selectedChatModel: "film-agent",
           selectedVisibilityType: "private",
         },
       });
@@ -184,7 +184,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
-            mode: "default",
+            mode: "archivo",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -194,7 +194,7 @@ test.describe
             ],
             createdAt: new Date().toISOString(),
           },
-          selectedChatModel: "chat-model",
+          selectedChatModel: "film-agent",
           selectedVisibilityType: "private",
         },
       });
@@ -235,7 +235,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
-            mode: "default",
+            mode: "archivo",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -245,7 +245,7 @@ test.describe
             ],
             createdAt: new Date().toISOString(),
           },
-          selectedChatModel: "chat-model",
+          selectedChatModel: "film-agent",
           selectedVisibilityType: "private",
         },
       });
@@ -279,7 +279,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
-            mode: "default",
+            mode: "archivo",
             content: "Help me write an essay about Silcon Valley",
             parts: [
               {
@@ -289,7 +289,7 @@ test.describe
             ],
             createdAt: new Date().toISOString(),
           },
-          selectedChatModel: "chat-model",
+          selectedChatModel: "film-agent",
           selectedVisibilityType: "private",
         },
       });
@@ -327,7 +327,7 @@ test.describe
           message: {
             id: generateUUID(),
             role: "user",
-            mode: "default",
+            mode: "archivo",
             content: "Help me write an essay about Silicon Valley",
             parts: [
               {
@@ -337,7 +337,7 @@ test.describe
             ],
             createdAt: new Date().toISOString(),
           },
-          selectedChatModel: "chat-model",
+          selectedChatModel: "film-agent",
           selectedVisibilityType: "public",
         },
       });
