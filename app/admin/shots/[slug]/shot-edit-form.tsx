@@ -258,6 +258,42 @@ export function ShotEditForm({
   };
 
   const vimeoId = extractVimeoId(form.vimeoUrl);
+  const [markdownDragging, setMarkdownDragging] = useState(false);
+
+  const applyMarkdownToForm = (md: string) => {
+    const parsed = parseMarkdownToShot(md);
+    const hasUpdates = Object.keys(parsed).length > 0;
+    if (hasUpdates) {
+      setForm((f) => ({
+        ...f,
+        title: parsed.title ?? f.title,
+        description: parsed.description ?? f.description ?? "",
+        historicContext:
+          parsed.historicContext ?? f.historicContext ?? "",
+        aestheticCriticalCommentary:
+          parsed.aestheticCriticalCommentary ??
+          f.aestheticCriticalCommentary ??
+          "",
+        productionCommentary:
+          parsed.productionCommentary ?? f.productionCommentary ?? "",
+        vimeoUrl: parsed.vimeoUrl ?? f.vimeoUrl ?? "",
+        date: parsed.date ?? f.date ?? "",
+        place: parsed.place ?? f.place ?? "",
+        author: parsed.author ?? f.author ?? "",
+        geotag: parsed.geotag ?? f.geotag ?? "",
+        tags: (parsed.tags ?? []).join(", "),
+      }));
+      toast({
+        type: "success",
+        description: "Form updated from Markdown.",
+      });
+    } else {
+      toast({
+        type: "error",
+        description: "Could not parse Markdown. Check the format.",
+      });
+    }
+  };
 
   return (
     <form className="max-w-2xl space-y-4" onSubmit={handleSubmit}>
@@ -436,7 +472,7 @@ export function ShotEditForm({
       <div className="space-y-4 rounded-lg border border-dashed p-4">
         <h3 className="font-medium text-sm">Markdown</h3>
         <p className="text-muted-foreground text-xs">
-          Export this shot as Markdown or paste Markdown to update the form.
+          Export as Markdown, or paste/drop a .md file to update the form.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -476,12 +512,67 @@ export function ShotEditForm({
         </div>
         <div className="grid gap-2">
           <Label htmlFor="markdown-paste">Update from Markdown</Label>
-          <textarea
-            className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            id="markdown-paste"
-            placeholder="Paste Markdown with YAML frontmatter here, then click Apply…"
-            rows={6}
-          />
+          <div
+            className="relative"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMarkdownDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMarkdownDragging(false);
+            }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMarkdownDragging(false);
+              const file = e.dataTransfer.files?.[0];
+              if (!file) return;
+              const isMd =
+                file.name.toLowerCase().endsWith(".md") ||
+                file.type === "text/markdown" ||
+                file.type === "text/x-markdown";
+              if (!isMd) {
+                toast({
+                  type: "error",
+                  description: "Please drop a .md file.",
+                });
+                return;
+              }
+              try {
+                const md = await file.text();
+                applyMarkdownToForm(md);
+              } catch {
+                toast({
+                  type: "error",
+                  description: "Could not read file.",
+                });
+              }
+            }}
+          >
+            <textarea
+              className={`flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                markdownDragging
+                  ? "border-primary ring-2 ring-primary/20"
+                  : ""
+              }`}
+              id="markdown-paste"
+              placeholder="Paste Markdown or drop a .md file here, then click Apply…"
+              rows={6}
+            />
+            {markdownDragging && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md border-2 border-dashed border-primary bg-primary/10"
+              >
+                <span className="text-muted-foreground text-sm">
+                  Drop .md file to apply
+                </span>
+              </div>
+            )}
+          </div>
           <Button
             onClick={() => {
               const textarea = document.getElementById(
@@ -495,39 +586,8 @@ export function ShotEditForm({
                 });
                 return;
               }
-              const parsed = parseMarkdownToShot(md);
-              const hasUpdates = Object.keys(parsed).length > 0;
-              if (hasUpdates) {
-                setForm((f) => ({
-                  ...f,
-                  title: parsed.title ?? f.title,
-                  description: parsed.description ?? f.description ?? "",
-                  historicContext:
-                    parsed.historicContext ?? f.historicContext ?? "",
-                  aestheticCriticalCommentary:
-                    parsed.aestheticCriticalCommentary ??
-                    f.aestheticCriticalCommentary ??
-                    "",
-                  productionCommentary:
-                    parsed.productionCommentary ?? f.productionCommentary ?? "",
-                  vimeoUrl: parsed.vimeoUrl ?? f.vimeoUrl ?? "",
-                  date: parsed.date ?? f.date ?? "",
-                  place: parsed.place ?? f.place ?? "",
-                  author: parsed.author ?? f.author ?? "",
-                  geotag: parsed.geotag ?? f.geotag ?? "",
-                  tags: (parsed.tags ?? []).join(", "),
-                }));
-                toast({
-                  type: "success",
-                  description: "Form updated from Markdown.",
-                });
-                if (textarea) textarea.value = "";
-              } else {
-                toast({
-                  type: "error",
-                  description: "Could not parse Markdown. Check the format.",
-                });
-              }
+              applyMarkdownToForm(md);
+              if (textarea) textarea.value = "";
             }}
             type="button"
             variant="secondary"

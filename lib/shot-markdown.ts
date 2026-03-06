@@ -31,58 +31,64 @@ function parseTags(value: unknown): string[] {
   return [];
 }
 
-/** Convert shot data to Markdown with frontmatter. */
+/** All frontmatter keys in export order. Empty fields are included so the format is self-documenting. */
+const FRONTMATTER_KEYS = [
+  "slug",
+  "title",
+  "vimeo_link",
+  "description",
+  "historic_context",
+  "aesthetic_critical_commentary",
+  "production_commentary",
+  "date",
+  "place",
+  "author",
+  "geotag",
+  "tags",
+] as const;
+
+/** Convert shot data to Markdown with frontmatter. All fields are always included (empty string when blank). */
 export function shotToMarkdown(shot: ShotMarkdownData): string {
   const tags = shot.tags ?? [];
-  const frontmatter: Record<string, string | string[] | undefined> = {
-    slug: shot.slug ?? undefined,
-    title: shot.title,
-    vimeo_link: shot.vimeoUrl ?? undefined,
-    date: shot.date ?? undefined,
-    geotag: shot.geotag ?? undefined,
-    place: shot.place ?? undefined,
-    author: shot.author ?? undefined,
-    description: shot.description ?? undefined,
-    historic_context: shot.historicContext ?? undefined,
-    aesthetic_critical_commentary:
-      shot.aestheticCriticalCommentary ?? undefined,
-    production_commentary: shot.productionCommentary ?? undefined,
-    tags: tags.length > 0 ? tags : undefined,
+  const values: Record<string, string | string[]> = {
+    slug: shot.slug ?? "",
+    title: shot.title ?? "",
+    vimeo_link: shot.vimeoUrl ?? "",
+    description: shot.description ?? "",
+    historic_context: shot.historicContext ?? "",
+    aesthetic_critical_commentary: shot.aestheticCriticalCommentary ?? "",
+    production_commentary: shot.productionCommentary ?? "",
+    date: shot.date ?? "",
+    place: shot.place ?? "",
+    author: shot.author ?? "",
+    geotag: shot.geotag ?? "",
+    tags,
   };
 
   const lines: string[] = ["---"];
-  for (const [key, value] of Object.entries(frontmatter)) {
-    if (value === undefined) {
-      continue;
-    }
+  for (const key of FRONTMATTER_KEYS) {
+    const value = values[key];
     if (Array.isArray(value)) {
       lines.push(
         `${key}: [${value.map((v) => `"${String(v).replace(/"/g, '\\"')}"`).join(", ")}]`
       );
     } else {
-      const escaped = String(value).replace(/"/g, '\\"');
+      const escaped = String(value ?? "").replace(/"/g, '\\"');
       lines.push(`${key}: "${escaped}"`);
     }
   }
   lines.push("---");
-  lines.push("");
-  if (shot.description) {
-    lines.push(shot.description);
-    lines.push("");
-  }
   return lines.join("\n");
 }
 
-/** Parse Markdown with frontmatter into shot data. */
+/** Parse Markdown with frontmatter into shot data. Only frontmatter is used; body is ignored. */
 export function parseMarkdownToShot(
   markdown: string
 ): Partial<ShotMarkdownData> {
   const result: Partial<ShotMarkdownData> = {};
   const frontmatterMatch = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  let body = markdown;
 
   if (frontmatterMatch) {
-    body = markdown.slice(frontmatterMatch[0].length).trim();
     const fm = frontmatterMatch[1];
     const lines = fm.split(/\r?\n/);
     for (const line of lines) {
@@ -147,12 +153,6 @@ export function parseMarkdownToShot(
           break;
       }
     }
-  }
-
-  if (body && !result.description) {
-    result.description = body;
-  } else if (body && result.description) {
-    result.description = body;
   }
 
   return result;
