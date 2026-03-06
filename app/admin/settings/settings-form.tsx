@@ -239,9 +239,9 @@ export function SettingsForm() {
         handleSave();
       }}
     >
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Prompts</h2>
-        <div className="space-y-4">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Prompts</h2>
+        <div className="space-y-4 p-4">
           {PROMPT_KEYS.map((key) => (
             <div className="grid gap-2" key={key}>
               <div className="flex items-center justify-between">
@@ -274,8 +274,11 @@ export function SettingsForm() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Embedding & Chunking</h2>
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">
+          Embedding & Chunking
+        </h2>
+        <div className="space-y-4 p-4">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Label htmlFor="embedding.model">Retrieval model</Label>
@@ -352,11 +355,12 @@ export function SettingsForm() {
             />
           </div>
         </div>
+        </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Retrieval</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Retrieval</h2>
+        <div className="grid gap-4 p-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="retrieval.k">Shots per query (k)</Label>
             <Input
@@ -430,9 +434,9 @@ export function SettingsForm() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Chat</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Chat</h2>
+        <div className="grid gap-4 p-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="chat.step_count">
               Max tool-call steps per turn
@@ -453,9 +457,9 @@ export function SettingsForm() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Entitlements</h2>
-        <div className="space-y-6">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Entitlements</h2>
+        <div className="space-y-6 p-4">
           <div>
             <h3 className="mb-2 font-medium text-sm">Guest</h3>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -559,9 +563,10 @@ export function SettingsForm() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Ingestion</h2>
-        <p className="mb-4 text-muted-foreground text-sm">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Ingestion</h2>
+        <div className="space-y-4 p-4">
+        <p className="text-muted-foreground text-sm">
           Throttle settings for when ingestion is triggered. See{" "}
           <a className="underline" href="/admin/ingest">
             /admin/ingest
@@ -599,6 +604,7 @@ export function SettingsForm() {
               value={String(settings["ingest.throttle_delay_ms"] ?? 10_000)}
             />
           </div>
+        </div>
         </div>
       </section>
 
