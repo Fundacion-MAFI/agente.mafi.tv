@@ -105,6 +105,15 @@ type PlaylistDocumentReference = {
   kind: "mafi-playlist";
 };
 
+function deduplicateShotsById(shots: RetrievedShot[]): RetrievedShot[] {
+  const seen = new Set<string>();
+  return shots.filter((shot) => {
+    if (seen.has(shot.id)) return false;
+    seen.add(shot.id);
+    return true;
+  });
+}
+
 function serializeShotsForPrompt(
   question: string,
   shots: RetrievedShot[]
@@ -115,12 +124,13 @@ function serializeShotsForPrompt(
       shotId: shot.id,
       slug: shot.slug,
       title: shot.title,
+      description: shot.description,
       author: shot.author,
       date: shot.date,
       place: shot.place,
       geotag: shot.geotag,
       tags: shot.tags,
-      excerpt: shot.chunkContent,
+      vimeoUrl: shot.vimeoUrl,
       historicContext: shot.historicContext,
       aestheticCriticalCommentary: shot.aestheticCriticalCommentary,
       productionCommentary: shot.productionCommentary,
@@ -312,7 +322,7 @@ function buildPlaylistDocumentContent({
       date: shotMatch?.date ?? null,
       place: shotMatch?.place ?? null,
       tags: shotMatch?.tags ?? [],
-      excerpt: shotMatch?.chunkContent ?? null,
+      excerpt: shotMatch?.description ?? null,
       vimeoUrl: shotMatch?.vimeoUrl ?? null,
       vimeoId: vimeoMetadata.videoId ?? null,
       startTimeSeconds: vimeoMetadata.startTimeSeconds ?? null,
@@ -603,9 +613,10 @@ export async function POST(request: Request) {
       try {
         const playlistAbortController = new AbortController();
         const playlistAbortSignal = playlistAbortController.signal;
+        const dedupedShots = deduplicateShotsById(retrievedShots);
         const retrievalContext = serializeShotsForPrompt(
           questionText,
-          retrievedShots
+          dedupedShots
         );
 
         const archiveModel =
@@ -690,7 +701,7 @@ export async function POST(request: Request) {
         const documentContent = buildPlaylistDocumentContent({
           question: questionText,
           answer,
-          shots: retrievedShots,
+          shots: dedupedShots,
         });
 
         await saveDocument({
