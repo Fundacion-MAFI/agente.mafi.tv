@@ -388,21 +388,6 @@ export function SettingsForm() {
             />
           </div>
           <div>
-            <Label htmlFor="retrieval.timeout_ms">Timeout (ms)</Label>
-            <Input
-              id="retrieval.timeout_ms"
-              min={1000}
-              onChange={(e) =>
-                updateLocal(
-                  "retrieval.timeout_ms",
-                  Number.parseInt(e.target.value, 10) || 12_000
-                )
-              }
-              type="number"
-              value={String(settings["retrieval.timeout_ms"] ?? 12_000)}
-            />
-          </div>
-          <div>
             <Label htmlFor="retrieval.cache_ttl_ms">Cache TTL (ms)</Label>
             <Input
               id="retrieval.cache_ttl_ms"
@@ -416,6 +401,10 @@ export function SettingsForm() {
               type="number"
               value={String(settings["retrieval.cache_ttl_ms"] ?? 300_000)}
             />
+            <p className="mt-1 text-muted-foreground text-xs">
+              How long cached retrieval results and query embeddings stay valid
+              (ms). 0 = no caching.
+            </p>
           </div>
           <div>
             <Label htmlFor="retrieval.cache_max_entries">
@@ -433,6 +422,10 @@ export function SettingsForm() {
               type="number"
               value={String(settings["retrieval.cache_max_entries"] ?? 128)}
             />
+            <p className="mt-1 text-muted-foreground text-xs">
+              Maximum number of cached queries. Oldest entries are evicted when
+              full.
+            </p>
           </div>
         </div>
       </section>
@@ -440,44 +433,6 @@ export function SettingsForm() {
       <section>
         <h2 className="mb-4 font-medium text-lg">Chat</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="chat.archivo_retrieval_timeout_ms">
-              Archivo retrieval timeout (ms)
-            </Label>
-            <Input
-              id="chat.archivo_retrieval_timeout_ms"
-              min={1000}
-              onChange={(e) =>
-                updateLocal(
-                  "chat.archivo_retrieval_timeout_ms",
-                  Number.parseInt(e.target.value, 10) || 12_000
-                )
-              }
-              type="number"
-              value={String(
-                settings["chat.archivo_retrieval_timeout_ms"] ?? 12_000
-              )}
-            />
-          </div>
-          <div>
-            <Label htmlFor="chat.archivo_playlist_timeout_ms">
-              Archivo playlist timeout (ms)
-            </Label>
-            <Input
-              id="chat.archivo_playlist_timeout_ms"
-              min={1000}
-              onChange={(e) =>
-                updateLocal(
-                  "chat.archivo_playlist_timeout_ms",
-                  Number.parseInt(e.target.value, 10) || 28_000
-                )
-              }
-              type="number"
-              value={String(
-                settings["chat.archivo_playlist_timeout_ms"] ?? 28_000
-              )}
-            />
-          </div>
           <div>
             <Label htmlFor="chat.step_count">
               Max tool-call steps per turn

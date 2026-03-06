@@ -21,8 +21,8 @@ export type RetrievedShot = Shot & {
 const DEFAULT_RETRIEVAL_K = 24;
 const MAX_RESULT_LIMIT = 50;
 const DEFAULT_RETRIEVAL_TIMEOUT_MS = 12_000;
-const CACHE_TTL_MS = 5 * 60_000;
-const CACHE_MAX_ENTRIES = 128;
+const DEFAULT_CACHE_TTL_MS = 5 * 60_000;
+const DEFAULT_CACHE_MAX_ENTRIES = 128;
 
 const EMBEDDING_TABLE_NAMES = [
   "shot_embeddings_768",
@@ -79,16 +79,18 @@ function getCachedValue<T>(
 function setCachedValue<T>(
   cache: Map<string, CacheEntry<T>>,
   key: string,
-  value: T
+  value: T,
+  ttlMs: number,
+  maxEntries: number
 ) {
-  if (cache.size >= CACHE_MAX_ENTRIES) {
+  if (cache.size >= maxEntries) {
     const [oldestKey] = cache.keys();
     if (oldestKey) {
       cache.delete(oldestKey);
     }
   }
 
-  cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  cache.set(key, { value, expiresAt: Date.now() + ttlMs });
 }
 
 type RetrievedShotRow = {
@@ -222,7 +224,21 @@ export async function retrieveRelevantShots(
     return [];
   }
 
-  const modelId = await getActiveEmbeddingModel();
+  const [modelId, cacheTtlMs, cacheMaxEntries] = await Promise.all([
+    getActiveEmbeddingModel(),
+    getAdminSetting("retrieval.cache_ttl_ms"),
+    getAdminSetting("retrieval.cache_max_entries"),
+  ]);
+
+  const ttlMs =
+    typeof cacheTtlMs === "number" && cacheTtlMs >= 0
+      ? cacheTtlMs
+      : DEFAULT_CACHE_TTL_MS;
+  const maxEntries =
+    typeof cacheMaxEntries === "number" && cacheMaxEntries >= 1
+      ? cacheMaxEntries
+      : DEFAULT_CACHE_MAX_ENTRIES;
+
   const dimensions = getEmbeddingDimensions(modelId);
   const tableName = `shot_embeddings_${dimensions}`;
 
@@ -267,7 +283,13 @@ export async function retrieveRelevantShots(
   }
 
   if (!cachedEmbedding) {
-    setCachedValue(embeddingCache, embeddingCacheKey, queryEmbedding);
+    setCachedValue(
+      embeddingCache,
+      embeddingCacheKey,
+      queryEmbedding,
+      ttlMs,
+      maxEntries
+    );
   }
 
   const vectorLiteral = buildVectorLiteral(queryEmbedding);
@@ -319,7 +341,9 @@ export async function retrieveRelevantShots(
   setCachedValue(
     retrievalCache,
     retrievalCacheKey,
-    shots.map((shot) => ({ ...shot }))
+    shots.map((shot) => ({ ...shot })),
+    ttlMs,
+    maxEntries
   );
 
   return shots;

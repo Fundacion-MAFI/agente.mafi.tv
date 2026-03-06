@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { computeShotChecksum } from "@/lib/db/shot-checksum";
 import {
   type EmbeddingModelId,
   getEmbeddingDimensions,
@@ -183,9 +184,18 @@ export async function runMafiIngest(
       const slug = shot.slug;
 
       let shouldUpdateEmbeddings = false;
-      let updateReason: "no embeddings" | "timestamp check" = "no embeddings";
+      let updateReason:
+        | "no embeddings"
+        | "timestamp check"
+        | "checksum mismatch" = "no embeddings";
 
-      if (embeddingTable) {
+      const expectedChecksum = computeShotChecksum(shot);
+      if (expectedChecksum !== shot.checksum) {
+        shouldUpdateEmbeddings = true;
+        updateReason = "checksum mismatch";
+      }
+
+      if (!shouldUpdateEmbeddings && embeddingTable) {
         const existingForModel = await db
           .select({
             createdAt: embeddingTable.createdAt,
@@ -211,7 +221,7 @@ export async function runMafiIngest(
             updateReason = "timestamp check";
           }
         }
-      } else {
+      } else if (!shouldUpdateEmbeddings && !embeddingTable) {
         shouldUpdateEmbeddings = true;
       }
 
@@ -220,7 +230,13 @@ export async function runMafiIngest(
         continue;
       }
 
-      if (updateReason === "timestamp check") {
+      if (updateReason === "checksum mismatch") {
+        log(
+          onLog,
+          lines,
+          "   → reason: content changed (checksum mismatch)"
+        );
+      } else if (updateReason === "timestamp check") {
         log(
           onLog,
           lines,
@@ -256,6 +272,12 @@ export async function runMafiIngest(
                 modelId: embeddingModel,
               }))
             );
+          }
+          if (updateReason === "checksum mismatch") {
+            await tx
+              .update(shots)
+              .set({ checksum: expectedChecksum })
+              .where(eq(shots.id, shot.id));
           }
         });
       }

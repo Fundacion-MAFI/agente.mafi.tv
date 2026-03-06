@@ -532,22 +532,13 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    const [
-      archivoPrompt,
-      retrievalTimeoutMs,
-      playlistTimeoutMs,
-      retrievalLimit,
-    ] = await Promise.all([
+    const [archivoPrompt, retrievalLimit] = await Promise.all([
       getAgenteFilmicoPrompt(),
-      getAdminSetting("chat.archivo_retrieval_timeout_ms"),
-      getAdminSetting("chat.archivo_playlist_timeout_ms"),
       getAdminSetting("retrieval.k"),
     ]);
 
-    const archivoRetrievalTimeoutMs =
-      typeof retrievalTimeoutMs === "number" ? retrievalTimeoutMs : 12_000;
-    const archivoPlaylistTimeoutMs =
-      typeof playlistTimeoutMs === "number" ? playlistTimeoutMs : 28_000;
+    const archivoRetrievalTimeoutMs = 12_000;
+    const archivoPlaylistTimeoutMs = 28_000;
     const archivoRetrievalLimit =
       typeof retrievalLimit === "number" && retrievalLimit >= 1
         ? retrievalLimit
