@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sheet";
 
 const IMPORT_WARNING =
-  "Bulk import does not check for duplicates. Rows with the same slug will overwrite existing shots. To update individual shots without creating duplicates, use the shot editor's Markdown import on each shot page.";
+  "Bulk import does not check for duplicates. Rows with the same slug will overwrite existing shots.";
 
 export function ShotsBulkActions() {
   const [importOpen, setImportOpen] = useState(false);
@@ -43,8 +43,10 @@ export function ShotsBulkActions() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const ext = file.name.toLowerCase().slice(-4);
-      formData.append("format", ext === ".xlsx" ? "xlsx" : "csv");
+      formData.append(
+        "format",
+        file.name.toLowerCase().endsWith(".xlsx") ? "xlsx" : "csv"
+      );
 
       const res = await fetch("/api/admin/shots/import", {
         method: "POST",

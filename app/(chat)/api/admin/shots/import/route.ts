@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     }
 
     file = uploaded;
-    const ext = file.name.toLowerCase().slice(-4);
-    if (formatParam === "xlsx" || ext === ".xlsx") {
+    const name = file.name.toLowerCase();
+    if (formatParam === "xlsx" || name.endsWith(".xlsx")) {
       format = "xlsx";
     } else {
       format = "csv";
@@ -48,6 +48,12 @@ export async function POST(request: Request) {
       format === "xlsx" ? parseXlsxToShots(buffer) : parseCsvToShots(buffer);
 
     if (rows.length === 0) {
+      console.warn(
+        "[shots-import] No valid rows. format=",
+        format,
+        "fileSize=",
+        buffer.length
+      );
       return NextResponse.json(
         { error: "No valid rows found. Each row needs slug and title." },
         { status: 400 }

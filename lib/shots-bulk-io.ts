@@ -44,9 +44,24 @@ function parseTags(tags: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
+function findCellValue(
+  row: Record<string, unknown>,
+  expectedKey: string
+): unknown {
+  const normalized = expectedKey.toLowerCase().trim();
+  for (const [k, v] of Object.entries(row)) {
+    const kNorm = k.toLowerCase().trim().replace(/\s+/g, "_");
+    const expectedNorm = normalized.replace(/\s+/g, "_");
+    if (kNorm === expectedNorm || k.toLowerCase().trim() === normalized) {
+      return v;
+    }
+  }
+  return row[expectedKey] ?? row[expectedKey.replace(/_/g, " ")] ?? null;
+}
+
 function toApiRow(row: Record<string, unknown>): BulkShotRow {
   const get = (k: string) => {
-    const v = row[k] ?? row[k.replace(/_/g, " ")] ?? null;
+    const v = findCellValue(row, k);
     return v != null && v !== "" ? String(v).trim() : null;
   };
   return {
@@ -80,10 +95,95 @@ export function parseCsvToShots(buffer: Buffer): BulkShotRow[] {
 /** Parse XLSX buffer into shot rows. */
 export function parseXlsxToShots(buffer: Buffer): BulkShotRow[] {
   const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  if (!sheet) return [];
-  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
-  return data.map(toApiRow).filter((r) => r.slug?.trim() && r.title?.trim());
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) {
+    console.warn("[shots-import] XLSX: No sheet found");
+    return [];
+  }
+  let data = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    defval: "",
+    raw: false,
+  });
+  let rows = data.map(toApiRow).filter((r) => r.slug?.trim() && r.title?.trim());
+  if (rows.length === 0 && data.length > 0) {
+    const firstRow = data[0];
+    const firstRowKeys = firstRow ? Object.keys(firstRow) : [];
+    console.warn(
+      "[shots-import] XLSX: sheet_to_json returned rows but none had slug+title. " +
+        "First row keys:",
+      JSON.stringify(firstRowKeys),
+      "Sample first row:",
+      JSON.stringify(firstRow)
+    );
+    const asArrays = XLSX.utils.sheet_to_json<string[]>(sheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+    });
+    if (asArrays.length >= 2) {
+      const rawHeaders = asArrays[0] ?? [];
+      const headers = rawHeaders.map((h) =>
+        String(h ?? "").toLowerCase().trim().replace(/\s+/g, "_")
+      );
+      const slugIdx = headers.indexOf("slug");
+      const titleIdx = headers.indexOf("title");
+      console.warn(
+        "[shots-import] XLSX fallback: rawHeaders=",
+        JSON.stringify(rawHeaders),
+        "slugIdx=",
+        slugIdx,
+        "titleIdx=",
+        titleIdx
+      );
+      if (slugIdx >= 0 && titleIdx >= 0) {
+        const out: BulkShotRow[] = [];
+        for (let i = 1; i < asArrays.length; i++) {
+          const arr = asArrays[i] ?? [];
+          const slug = String(arr[slugIdx] ?? "").trim();
+          const title = String(arr[titleIdx] ?? "").trim();
+          if (slug && title) {
+            const get = (idx: number) => {
+              const v = arr[idx];
+              return v != null && v !== "" ? String(v).trim() : null;
+            };
+            out.push({
+              slug,
+              title,
+              description: get(headers.indexOf("description")),
+              historic_context: get(headers.indexOf("historic_context")),
+              aesthetic_critical_commentary: get(
+                headers.indexOf("aesthetic_critical_commentary")
+              ),
+              production_commentary: get(
+                headers.indexOf("production_commentary")
+              ),
+              vimeo_url: get(headers.indexOf("vimeo_url")),
+              date: get(headers.indexOf("date")),
+              place: get(headers.indexOf("place")),
+              author: get(headers.indexOf("author")),
+              geotag: get(headers.indexOf("geotag")),
+              tags: get(headers.indexOf("tags")) ?? "",
+            });
+          }
+        }
+        rows = out;
+        console.warn("[shots-import] XLSX fallback parsed", rows.length, "rows");
+      } else {
+        console.warn(
+          "[shots-import] XLSX fallback: slug/title not found in headers"
+        );
+      }
+    } else {
+      console.warn(
+        "[shots-import] XLSX fallback: asArrays.length=",
+        asArrays.length
+      );
+    }
+  } else if (rows.length === 0 && data.length === 0) {
+    console.warn("[shots-import] XLSX: sheet_to_json returned 0 rows");
+  }
+  return rows;
 }
 
 /** Convert shot rows to CSV string. */
