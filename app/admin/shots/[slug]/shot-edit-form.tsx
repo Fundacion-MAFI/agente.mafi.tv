@@ -7,6 +7,7 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseMarkdownToShot, shotToMarkdown } from "@/lib/shot-markdown";
 
 function normalizeTagsForCompare(tags: string | string[]): string {
   const arr = (
@@ -77,8 +78,7 @@ export function ShotEditForm({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
     historicContext: initialData?.historicContext ?? "",
-    aestheticCriticalCommentary:
-      initialData?.aestheticCriticalCommentary ?? "",
+    aestheticCriticalCommentary: initialData?.aestheticCriticalCommentary ?? "",
     productionCommentary: initialData?.productionCommentary ?? "",
     vimeoUrl: initialData?.vimeoUrl ?? "",
     date: initialData?.date ?? "",
@@ -144,8 +144,7 @@ export function ShotEditForm({
         title: form.title,
         description: form.description || null,
         historicContext: form.historicContext || null,
-        aestheticCriticalCommentary:
-          form.aestheticCriticalCommentary || null,
+        aestheticCriticalCommentary: form.aestheticCriticalCommentary || null,
         productionCommentary: form.productionCommentary || null,
         vimeoUrl: form.vimeoUrl || null,
         date: form.date || null,
@@ -170,7 +169,8 @@ export function ShotEditForm({
         } else {
           const modelLabel =
             typeof data.embeddingModel === "string"
-              ? EMBEDDING_MODEL_LABELS[data.embeddingModel] ?? data.embeddingModel
+              ? (EMBEDDING_MODEL_LABELS[data.embeddingModel] ??
+                data.embeddingModel)
               : "selected model";
           toast({
             type: "success",
@@ -195,7 +195,8 @@ export function ShotEditForm({
       } else {
         const modelLabel =
           typeof data.embeddingModel === "string"
-            ? EMBEDDING_MODEL_LABELS[data.embeddingModel] ?? data.embeddingModel
+            ? (EMBEDDING_MODEL_LABELS[data.embeddingModel] ??
+              data.embeddingModel)
             : "selected model";
         toast({
           type: "success",
@@ -430,6 +431,110 @@ export function ShotEditForm({
           placeholder="bicentenario, bandera"
           value={form.tags}
         />
+      </div>
+
+      <div className="space-y-4 rounded-lg border border-dashed p-4">
+        <h3 className="font-medium text-sm">Markdown</h3>
+        <p className="text-muted-foreground text-xs">
+          Export this shot as Markdown or paste Markdown to update the form.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => {
+              const md = shotToMarkdown({
+                slug: form.slug || undefined,
+                title: form.title,
+                description: form.description || null,
+                historicContext: form.historicContext || null,
+                aestheticCriticalCommentary:
+                  form.aestheticCriticalCommentary || null,
+                productionCommentary: form.productionCommentary || null,
+                vimeoUrl: form.vimeoUrl || null,
+                date: form.date || null,
+                place: form.place || null,
+                author: form.author || null,
+                geotag: form.geotag || null,
+                tags: form.tags
+                  .split(",")
+                  .map((t) => t.trim())
+                  .filter(Boolean),
+              });
+              const blob = new Blob([md], { type: "text/markdown" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `${form.slug || "shot"}.md`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast({ type: "success", description: "Markdown downloaded." });
+            }}
+            type="button"
+            variant="outline"
+          >
+            Export to Markdown
+          </Button>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="markdown-paste">Update from Markdown</Label>
+          <textarea
+            className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            id="markdown-paste"
+            placeholder="Paste Markdown with YAML frontmatter here, then click Apply…"
+            rows={6}
+          />
+          <Button
+            onClick={() => {
+              const textarea = document.getElementById(
+                "markdown-paste"
+              ) as HTMLTextAreaElement | null;
+              const md = textarea?.value?.trim();
+              if (!md) {
+                toast({
+                  type: "error",
+                  description: "Paste Markdown first.",
+                });
+                return;
+              }
+              const parsed = parseMarkdownToShot(md);
+              const hasUpdates = Object.keys(parsed).length > 0;
+              if (hasUpdates) {
+                setForm((f) => ({
+                  ...f,
+                  title: parsed.title ?? f.title,
+                  description: parsed.description ?? f.description ?? "",
+                  historicContext:
+                    parsed.historicContext ?? f.historicContext ?? "",
+                  aestheticCriticalCommentary:
+                    parsed.aestheticCriticalCommentary ??
+                    f.aestheticCriticalCommentary ??
+                    "",
+                  productionCommentary:
+                    parsed.productionCommentary ?? f.productionCommentary ?? "",
+                  vimeoUrl: parsed.vimeoUrl ?? f.vimeoUrl ?? "",
+                  date: parsed.date ?? f.date ?? "",
+                  place: parsed.place ?? f.place ?? "",
+                  author: parsed.author ?? f.author ?? "",
+                  geotag: parsed.geotag ?? f.geotag ?? "",
+                  tags: (parsed.tags ?? []).join(", "),
+                }));
+                toast({
+                  type: "success",
+                  description: "Form updated from Markdown.",
+                });
+                if (textarea) textarea.value = "";
+              } else {
+                toast({
+                  type: "error",
+                  description: "Could not parse Markdown. Check the format.",
+                });
+              }
+            }}
+            type="button"
+            variant="secondary"
+          >
+            Apply Markdown
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3 pt-4">

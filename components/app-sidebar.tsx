@@ -81,7 +81,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   width={160}
                 />
               </Link>
-              <div className="absolute top-1/2 right-0 flex -translate-y-1/2 flex-row gap-1">
+              <div className="-translate-y-1/2 absolute top-1/2 right-0 flex flex-row gap-1">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button

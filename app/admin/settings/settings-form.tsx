@@ -279,82 +279,82 @@ export function SettingsForm() {
           Embedding & Chunking
         </h2>
         <div className="space-y-4 p-4">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="embedding.model">Retrieval model</Label>
-            <Select
-              onValueChange={(value) => updateLocal("embedding.model", value)}
-              value={String(
-                settings["embedding.model"] ?? "openai/text-embedding-3-small"
-              )}
-            >
-              <SelectTrigger id="embedding.model" className="w-[280px]">
-                <SelectValue placeholder="Select model" />
-              </SelectTrigger>
-              <SelectContent>
-                {EMBEDDING_MODELS.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {embeddingsStatus && (
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm ${
-                  embeddingsStatus.isReady
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                }`}
-              >
-                {embeddingsStatus.isReady ? (
-                  <>
-                    <span aria-hidden>✓</span>
-                    {embeddingsStatus.embeddingCount} shots
-                  </>
-                ) : (
-                  <>
-                    <span aria-hidden>⚠</span>
-                    {embeddingsStatus.embeddingCount}/{embeddingsStatus.shotCount}{" "}
-                    shots
-                  </>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="embedding.model">Retrieval model</Label>
+              <Select
+                onValueChange={(value) => updateLocal("embedding.model", value)}
+                value={String(
+                  settings["embedding.model"] ?? "openai/text-embedding-3-small"
                 )}
-              </span>
-            )}
+              >
+                <SelectTrigger className="w-[280px]" id="embedding.model">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMBEDDING_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {embeddingsStatus && (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm ${
+                    embeddingsStatus.isReady
+                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {embeddingsStatus.isReady ? (
+                    <>
+                      <span aria-hidden>✓</span>
+                      {embeddingsStatus.embeddingCount} shots
+                    </>
+                  ) : (
+                    <>
+                      <span aria-hidden>⚠</span>
+                      {embeddingsStatus.embeddingCount}/
+                      {embeddingsStatus.shotCount} shots
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="embedding.chunk_size">Chunk size</Label>
-            <Input
-              id="embedding.chunk_size"
-              min={100}
-              onChange={(e) =>
-                updateLocal(
-                  "embedding.chunk_size",
-                  Number.parseInt(e.target.value, 10) || 800
-                )
-              }
-              type="number"
-              value={String(settings["embedding.chunk_size"] ?? 800)}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="embedding.chunk_size">Chunk size</Label>
+              <Input
+                id="embedding.chunk_size"
+                min={100}
+                onChange={(e) =>
+                  updateLocal(
+                    "embedding.chunk_size",
+                    Number.parseInt(e.target.value, 10) || 800
+                  )
+                }
+                type="number"
+                value={String(settings["embedding.chunk_size"] ?? 800)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="embedding.chunk_overlap">Chunk overlap</Label>
+              <Input
+                id="embedding.chunk_overlap"
+                min={0}
+                onChange={(e) =>
+                  updateLocal(
+                    "embedding.chunk_overlap",
+                    Number.parseInt(e.target.value, 10) || 200
+                  )
+                }
+                type="number"
+                value={String(settings["embedding.chunk_overlap"] ?? 200)}
+              />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="embedding.chunk_overlap">Chunk overlap</Label>
-            <Input
-              id="embedding.chunk_overlap"
-              min={0}
-              onChange={(e) =>
-                updateLocal(
-                  "embedding.chunk_overlap",
-                  Number.parseInt(e.target.value, 10) || 200
-                )
-              }
-              type="number"
-              value={String(settings["embedding.chunk_overlap"] ?? 200)}
-            />
-          </div>
-        </div>
         </div>
       </section>
 
@@ -566,45 +566,45 @@ export function SettingsForm() {
       <section className="overflow-hidden rounded-lg border">
         <h2 className="bg-muted px-4 py-3 font-medium text-lg">Ingestion</h2>
         <div className="space-y-4 p-4">
-        <p className="text-muted-foreground text-sm">
-          Throttle settings for when ingestion is triggered. See{" "}
-          <a className="underline" href="/admin/ingest">
-            /admin/ingest
-          </a>{" "}
-          to run ingestion.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex items-center gap-2">
-            <input
-              checked={settings["ingest.throttle_enabled"] !== false}
-              id="ingest.throttle_enabled"
-              onChange={(e) =>
-                updateLocal("ingest.throttle_enabled", e.target.checked)
-              }
-              type="checkbox"
-            />
-            <Label htmlFor="ingest.throttle_enabled">
-              Enable throttling (delay between embedding calls)
-            </Label>
+          <p className="text-muted-foreground text-sm">
+            Throttle settings for when ingestion is triggered. See{" "}
+            <a className="underline" href="/admin/ingest">
+              /admin/ingest
+            </a>{" "}
+            to run ingestion.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-2">
+              <input
+                checked={settings["ingest.throttle_enabled"] !== false}
+                id="ingest.throttle_enabled"
+                onChange={(e) =>
+                  updateLocal("ingest.throttle_enabled", e.target.checked)
+                }
+                type="checkbox"
+              />
+              <Label htmlFor="ingest.throttle_enabled">
+                Enable throttling (delay between embedding calls)
+              </Label>
+            </div>
+            <div>
+              <Label htmlFor="ingest.throttle_delay_ms">
+                Throttle delay (ms)
+              </Label>
+              <Input
+                id="ingest.throttle_delay_ms"
+                min={0}
+                onChange={(e) =>
+                  updateLocal(
+                    "ingest.throttle_delay_ms",
+                    Number.parseInt(e.target.value, 10) || 10_000
+                  )
+                }
+                type="number"
+                value={String(settings["ingest.throttle_delay_ms"] ?? 10_000)}
+              />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="ingest.throttle_delay_ms">
-              Throttle delay (ms)
-            </Label>
-            <Input
-              id="ingest.throttle_delay_ms"
-              min={0}
-              onChange={(e) =>
-                updateLocal(
-                  "ingest.throttle_delay_ms",
-                  Number.parseInt(e.target.value, 10) || 10_000
-                )
-              }
-              type="number"
-              value={String(settings["ingest.throttle_delay_ms"] ?? 10_000)}
-            />
-          </div>
-        </div>
         </div>
       </section>
 

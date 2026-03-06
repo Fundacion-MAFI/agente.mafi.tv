@@ -1,8 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-
-import { computeShotChecksum } from "@/lib/db/shot-checksum";
 import {
   type EmbeddingModelId,
   getEmbeddingDimensions,
@@ -10,8 +8,9 @@ import {
 } from "@/lib/ai/embedding-models";
 import { generateShotEmbeddings } from "@/lib/ai/mafi-embeddings";
 import { embeddingModelMetadata } from "@/lib/db/schema/embedding-metadata";
-import { SHOT_EMBEDDING_TABLES, shots } from "@/lib/db/schema/shots";
 import type { Shot } from "@/lib/db/schema/shots";
+import { SHOT_EMBEDDING_TABLES, shots } from "@/lib/db/schema/shots";
+import { computeShotChecksum } from "@/lib/db/shot-checksum";
 
 const INGEST_DEFAULTS = {
   throttleEnabled: true,
@@ -231,11 +230,7 @@ export async function runMafiIngest(
       }
 
       if (updateReason === "checksum mismatch") {
-        log(
-          onLog,
-          lines,
-          "   → reason: content changed (checksum mismatch)"
-        );
+        log(onLog, lines, "   → reason: content changed (checksum mismatch)");
       } else if (updateReason === "timestamp check") {
         log(
           onLog,
@@ -243,7 +238,12 @@ export async function runMafiIngest(
           "   → reason: shot.updated_at > embedding.created_at"
         );
       } else if (updateReason === "no embeddings") {
-        log(onLog, lines, "   → reason: no embeddings for model", embeddingModel);
+        log(
+          onLog,
+          lines,
+          "   → reason: no embeddings for model",
+          embeddingModel
+        );
       }
 
       const textToEmbed = buildTextToEmbed(shot);
@@ -283,7 +283,13 @@ export async function runMafiIngest(
       }
 
       embeddingsUpdated += 1;
-      log(onLog, lines, "✅ Updated embeddings for shot", slug, `(${updateReason})`);
+      log(
+        onLog,
+        lines,
+        "✅ Updated embeddings for shot",
+        slug,
+        `(${updateReason})`
+      );
 
       if (throttle && delay > 0) {
         await sleep(delay);
@@ -292,7 +298,11 @@ export async function runMafiIngest(
 
     const pruned = 0;
     if (prune) {
-      log(onLog, lines, "⚠️ Prune is ignored (database is the single source of truth)");
+      log(
+        onLog,
+        lines,
+        "⚠️ Prune is ignored (database is the single source of truth)"
+      );
     }
 
     log(
@@ -310,15 +320,15 @@ export async function runMafiIngest(
       .insert(embeddingModelMetadata)
       .values({
         modelId: embeddingModel,
-        chunkSize: chunkSize,
-        chunkOverlap: chunkOverlap,
+        chunkSize,
+        chunkOverlap,
         embeddedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: embeddingModelMetadata.modelId,
         set: {
-          chunkSize: chunkSize,
-          chunkOverlap: chunkOverlap,
+          chunkSize,
+          chunkOverlap,
           embeddedAt: new Date(),
         },
       });

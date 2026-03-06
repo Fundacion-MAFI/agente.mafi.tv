@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "@/components/toast";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -10,7 +11,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { useAdminIngest } from "../admin-ingest-context";
 
@@ -88,7 +88,10 @@ export function IngestTrigger() {
         });
         const data = await res.json();
         if (res.ok) {
-          toast({ type: "success", description: `Purged ${data.deleted} embeddings` });
+          toast({
+            type: "success",
+            description: `Purged ${data.deleted} embeddings`,
+          });
           await fetchStatus();
         } else {
           toast({ type: "error", description: data.error ?? "Purge failed" });

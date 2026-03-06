@@ -27,7 +27,8 @@ function buildMarkdownFromShot(shot: {
     author: shot.author ?? undefined,
     description: shot.description ?? undefined,
     historic_context: shot.historicContext ?? undefined,
-    aesthetic_critical_commentary: shot.aestheticCriticalCommentary ?? undefined,
+    aesthetic_critical_commentary:
+      shot.aestheticCriticalCommentary ?? undefined,
     production_commentary: shot.productionCommentary ?? undefined,
     tags: tags.length > 0 ? tags : undefined,
   };

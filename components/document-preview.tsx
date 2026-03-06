@@ -272,7 +272,7 @@ const DocumentContent = ({ document }: { document: Document }) => {
   const { artifact } = useArtifact();
 
   const containerClassName = cn(
-    "h-[275px] overflow-x-hidden overflow-y-auto rounded-b-[var(--radius-input)]",
+    "h-[275px] overflow-y-auto overflow-x-hidden rounded-b-[var(--radius-input)]",
     {
       "p-4 sm:px-14 sm:py-16": document.kind === "text",
       "p-0": document.kind === "code",
@@ -330,13 +330,7 @@ const DocumentContent = ({ document }: { document: Document }) => {
   );
 };
 
-function ShotThumbnail({
-  slug,
-  title,
-}: {
-  slug: string;
-  title: string;
-}) {
+function ShotThumbnail({ slug, title }: { slug: string; title: string }) {
   const [error, setError] = useState(false);
   const thumbSrc = `/images/shots/${slug}.webp`;
 
@@ -395,12 +389,7 @@ function MafiPlaylistPreview({
   }
 
   return (
-    <div
-      className={cn(
-        "flex h-full w-full flex-row gap-2",
-        className
-      )}
-    >
+    <div className={cn("flex h-full w-full flex-row gap-2", className)}>
       {parsed.playlist.slice(0, 6).map((entry, index) => {
         const slug = entry.slug ?? String(index + 1);
         return (

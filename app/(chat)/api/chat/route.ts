@@ -746,8 +746,7 @@ export async function POST(request: Request) {
     };
 
     const stream = createUIMessageStream({
-      execute: ({ writer: dataStream }) =>
-        handleArchivoRequest(dataStream),
+      execute: ({ writer: dataStream }) => handleArchivoRequest(dataStream),
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
         await saveMessages({
