@@ -138,4 +138,4 @@ Pass both:
 - Retrieval: `lib/ai/mafi-retrieval.ts` — `retrieveRelevantShots`
 - Prompt serialization: `app/(chat)/api/chat/route.ts` — `serializeShotsForPrompt`
 - Settings UI: `app/admin/settings/settings-form.tsx` — chunk size and overlap inputs
-- Ingest defaults: `lib/ingest/run-mafi-ingest.ts` — `INGEST_DEFAULTS`
+- Ingest defaults: `lib/ingest/run-mafi-ingest.ts` — `INGEST_DEFAULTS` (reads from database)

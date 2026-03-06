@@ -5,7 +5,6 @@ import {
   getShotBySlug,
   upsertShotWithEmbeddings,
 } from "@/lib/db/admin-shots";
-import { syncShotToGitHub } from "@/lib/github/sync-shot";
 
 export async function GET(
   request: Request,
@@ -95,19 +94,6 @@ export async function PATCH(
 
   try {
     const shot = await upsertShotWithEmbeddings(updates);
-
-    const sync = await syncShotToGitHub(shot, "update");
-    if (!sync.ok) {
-      console.warn("GitHub sync failed after DB update:", sync.error);
-      return NextResponse.json(
-        {
-          shot,
-          warning: `Shot saved to DB but GitHub sync failed: ${sync.error}`,
-        },
-        { status: 200 }
-      );
-    }
-
     return NextResponse.json(shot);
   } catch (error) {
     console.error("Admin update shot error:", error);
@@ -139,18 +125,6 @@ export async function DELETE(
     const shot = await deleteShotBySlug(slug);
     if (!shot) {
       return NextResponse.json({ error: "Shot not found" }, { status: 404 });
-    }
-
-    const sync = await syncShotToGitHub(shot, "delete");
-    if (!sync.ok) {
-      console.warn("GitHub sync failed after DB delete:", sync.error);
-      return NextResponse.json(
-        {
-          message: "Shot deleted from DB",
-          warning: `GitHub sync failed: ${sync.error}`,
-        },
-        { status: 200 }
-      );
     }
 
     return NextResponse.json({ message: "Shot deleted" });

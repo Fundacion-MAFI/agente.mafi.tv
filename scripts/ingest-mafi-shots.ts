@@ -1,4 +1,3 @@
-import path from "node:path";
 import { config } from "dotenv";
 
 import { runMafiIngest } from "../lib/ingest/run-mafi-ingest";
@@ -7,11 +6,9 @@ config({ path: ".env.local" });
 config();
 
 const shouldPrune = process.argv.includes("--prune");
-const dataDirectory = path.join(process.cwd(), "data", "mafi-shots");
 
 runMafiIngest({
   prune: shouldPrune,
-  dataDirectory,
   onLog: (line) => console.log(line),
 })
   .then((result) => {

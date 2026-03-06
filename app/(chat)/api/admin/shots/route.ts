@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { listShots, upsertShotWithEmbeddings } from "@/lib/db/admin-shots";
-import { syncShotToGitHub } from "@/lib/github/sync-shot";
 
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
@@ -85,18 +84,6 @@ export async function POST(request: Request) {
       geotag: body.geotag ?? null,
       tags: body.tags ?? [],
     });
-
-    const sync = await syncShotToGitHub(shot, "create");
-    if (!sync.ok) {
-      console.warn("GitHub sync failed after DB update:", sync.error);
-      return NextResponse.json(
-        {
-          shot,
-          warning: `Shot saved to DB but GitHub sync failed: ${sync.error}`,
-        },
-        { status: 201 }
-      );
-    }
 
     return NextResponse.json(shot, { status: 201 });
   } catch (error) {
