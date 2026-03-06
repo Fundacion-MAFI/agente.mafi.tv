@@ -238,7 +238,11 @@ export async function runMafiIngest(
       } satisfies typeof shots.$inferInsert;
 
       const existing = await db
-        .select({ id: shots.id, checksum: shots.checksum })
+        .select({
+          id: shots.id,
+          checksum: shots.checksum,
+          updatedAt: shots.updatedAt,
+        })
         .from(shots)
         .where(eq(shots.slug, slug))
         .limit(1);
@@ -251,10 +255,14 @@ export async function runMafiIngest(
 
       let shouldUpdateEmbeddings =
         existing.length === 0 || existing[0].checksum !== checksum;
+      let updateReason: "new" | "hash diff" | "timestamp check" | "no embeddings" =
+        existing.length === 0 ? "new" : "hash diff";
 
       if (!shouldUpdateEmbeddings && embeddingTable) {
         const existingForModel = await db
-          .select()
+          .select({
+            createdAt: embeddingTable.createdAt,
+          })
           .from(embeddingTable)
           .where(
             and(
@@ -265,6 +273,16 @@ export async function runMafiIngest(
           .limit(1);
         if (existingForModel.length === 0) {
           shouldUpdateEmbeddings = true;
+          updateReason = "no embeddings";
+        } else {
+          const shotUpdatedAt = existing[0].updatedAt.getTime();
+          const embeddingCreatedAt = (
+            existingForModel[0] as { createdAt: Date }
+          ).createdAt.getTime();
+          if (shotUpdatedAt > embeddingCreatedAt) {
+            shouldUpdateEmbeddings = true;
+            updateReason = "timestamp check";
+          }
         }
       }
 
@@ -318,7 +336,7 @@ export async function runMafiIngest(
       }
 
       embeddingsUpdated += 1;
-      log(onLog, lines, "✅ Updated embeddings for shot", slug);
+      log(onLog, lines, "✅ Updated embeddings for shot", slug, `(${updateReason})`);
 
       if (throttle && delay > 0) {
         await sleep(delay);
