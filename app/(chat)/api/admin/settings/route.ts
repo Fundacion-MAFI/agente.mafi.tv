@@ -82,11 +82,10 @@ const ALLOWED_KEYS: AdminSettingKey[] = [
   "retrieval.max_result_limit",
   "retrieval.cache_ttl_ms",
   "retrieval.cache_max_entries",
+  "chat.model",
   "chat.step_count",
   "entitlements.guest.max_messages_per_day",
-  "entitlements.guest.available_chat_model_ids",
   "entitlements.regular.max_messages_per_day",
-  "entitlements.regular.available_chat_model_ids",
   "ingest.throttle_enabled",
   "ingest.throttle_delay_ms",
 ];
@@ -108,21 +107,8 @@ function parseValue(
       : undefined;
   }
 
-  if (
-    key.includes("available_chat_model_ids") ||
-    key === "entitlements.guest.available_chat_model_ids" ||
-    key === "entitlements.regular.available_chat_model_ids"
-  ) {
-    if (Array.isArray(raw)) {
-      return raw.filter((x): x is string => typeof x === "string");
-    }
-    if (typeof raw === "string") {
-      return raw
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-    return;
+  if (key === "chat.model") {
+    return typeof raw === "string" ? raw.trim() : undefined;
   }
 
   if (

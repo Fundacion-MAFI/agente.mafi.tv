@@ -42,7 +42,7 @@ function resolveFilmAgentGateway() {
   return gateway;
 }
 
-const filmAgentGateway = resolveFilmAgentGateway();
+export const filmAgentGateway = resolveFilmAgentGateway();
 
 export const myProvider = isTestEnvironment
   ? (() => {

@@ -24,7 +24,7 @@ import {
 } from "@/lib/ai/mafi-retrieval";
 import { type MafiAnswer, mafiAnswerSchema } from "@/lib/ai/mafi-schema";
 import type { ChatModel } from "@/lib/ai/models";
-import { myProvider } from "@/lib/ai/providers";
+import { filmAgentGateway, myProvider } from "@/lib/ai/providers";
 import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
 import {
   isProductionEnvironment,
@@ -532,9 +532,10 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    const [archivoPrompt, retrievalLimit] = await Promise.all([
+    const [archivoPrompt, retrievalLimit, chatModelId] = await Promise.all([
       getAgenteFilmicoPrompt(),
       getAdminSetting("retrieval.k"),
+      getAdminSetting("chat.model"),
     ]);
 
     const archivoRetrievalTimeoutMs = 12_000;
@@ -546,10 +547,10 @@ export async function POST(request: Request) {
 
     let finalMergedUsage: AppUsage | undefined;
 
-    const DEFAULT_ARCHIVO_MODEL_ID: ChatModel["id"] = "film-agent";
-    const allowedArchivoModels = new Set<ChatModel["id"]>([
-      DEFAULT_ARCHIVO_MODEL_ID,
-    ]);
+    const archiveModelId =
+      typeof chatModelId === "string" && chatModelId.trim().length > 0
+        ? chatModelId.trim()
+        : "openai/gpt-5.2";
 
     const handleArchivoRequest = async (
       dataStream: UIMessageStreamWriter<ChatMessage>
@@ -607,10 +608,15 @@ export async function POST(request: Request) {
           retrievedShots
         );
 
-        const archivoModelId = allowedArchivoModels.has(selectedChatModel)
-          ? selectedChatModel
-          : DEFAULT_ARCHIVO_MODEL_ID;
-        const archiveModel = myProvider.languageModel(archivoModelId);
+        const archiveModel =
+          filmAgentGateway.languageModel(archiveModelId);
+        if (process.env.NODE_ENV !== "test") {
+          console.info("[chat] Archivo gateway request", {
+            model: archiveModelId,
+            chatId: id,
+            streamId,
+          });
+        }
         const objectResult = streamObject({
           model: archiveModel,
           system: archivoPrompt,

@@ -14,6 +14,21 @@ import {
 } from "@/components/ui/select";
 import { useAdminDirty } from "../admin-dirty-context";
 
+const CHAT_MODELS = [
+  { id: "xai/grok-4.1-fast-non-reasoning", label: "xAI Grok 4.1 Fast (non-reasoning)" },
+  { id: "xai/grok-4.1-fast-reasoning", label: "xAI Grok 4.1 Fast (reasoning)" },
+  { id: "openai/gpt-5.2", label: "OpenAI GPT-5.2" },
+  { id: "openai/gpt-5.4", label: "OpenAI GPT-5.4" },
+  { id: "openai/gpt-5-mini", label: "OpenAI GPT-5 Mini" },
+  { id: "anthropic/claude-opus-4.6", label: "Anthropic Claude Opus 4.6" },
+  { id: "anthropic/claude-sonnet-4.6", label: "Anthropic Claude Sonnet 4.6" },
+  { id: "google/gemini-3-flash", label: "Google Gemini 3 Flash" },
+  { id: "google/gemini-2.5-flash", label: "Google Gemini 2.5 Flash" },
+  { id: "google/gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
+] as const;
+
+const CHAT_MODEL_IDS: readonly string[] = CHAT_MODELS.map((m) => m.id);
+
 const EMBEDDING_MODELS = [
   { id: "openai/text-embedding-3-small", label: "OpenAI 3 Small (1536)" },
   { id: "openai/text-embedding-3-large", label: "OpenAI 3 Large (3072)" },
@@ -180,14 +195,6 @@ export function SettingsForm() {
 
   const updateLocal = (key: string, value: string | number | boolean) => {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : null));
-  };
-
-  const updateArray = (key: string, value: string) => {
-    const arr = value
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    setSettings((prev) => (prev ? { ...prev, [key]: arr } : null));
   };
 
   async function handleSave() {
@@ -438,6 +445,59 @@ export function SettingsForm() {
         <h2 className="bg-muted px-4 py-3 font-medium text-lg">Chat</h2>
         <div className="grid gap-4 p-4 sm:grid-cols-2">
           <div>
+            <Label htmlFor="chat.model">Agente Fílmico model</Label>
+            <Select
+              onValueChange={(value) =>
+                updateLocal(
+                  "chat.model",
+                  value === "__custom__" ? "" : value
+                )
+              }
+              value={
+                CHAT_MODEL_IDS.includes(
+                  String(settings["chat.model"] ?? "openai/gpt-5.2")
+                )
+                  ? String(settings["chat.model"] ?? "openai/gpt-5.2")
+                  : "__custom__"
+              }
+            >
+              <SelectTrigger className="w-[280px]" id="chat.model">
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                {CHAT_MODELS.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__custom__">Custom (enter below)</SelectItem>
+              </SelectContent>
+            </Select>
+            {!CHAT_MODEL_IDS.includes(
+              String(settings["chat.model"] ?? "")
+            ) && (
+              <Input
+                className="mt-2 w-[280px] font-mono text-sm"
+                onChange={(e) =>
+                  updateLocal("chat.model", e.target.value.trim())
+                }
+                placeholder="provider/model-id"
+                value={String(settings["chat.model"] ?? "")}
+              />
+            )}
+            <p className="mt-1 text-muted-foreground text-xs">
+              Model used for Archivo playlist generation.
+            </p>
+            <a
+              className="mt-1 inline-block text-muted-foreground text-xs underline hover:text-foreground"
+              href="https://vercel.com/pablos-projects-c370279e/agente-mafi-tv/ai-gateway/models?capabilities=text"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              For more models →
+            </a>
+          </div>
+          <div>
             <Label htmlFor="chat.step_count">
               Max tool-call steps per turn
             </Label>
@@ -459,106 +519,46 @@ export function SettingsForm() {
 
       <section className="overflow-hidden rounded-lg border">
         <h2 className="bg-muted px-4 py-3 font-medium text-lg">Entitlements</h2>
-        <div className="space-y-6 p-4">
+        <div className="grid gap-6 p-4 sm:grid-cols-2">
           <div>
             <h3 className="mb-2 font-medium text-sm">Guest</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="entitlements.guest.max_messages_per_day">
-                  Max messages per day
-                </Label>
-                <Input
-                  id="entitlements.guest.max_messages_per_day"
-                  min={0}
-                  onChange={(e) =>
-                    updateLocal(
-                      "entitlements.guest.max_messages_per_day",
-                      Number.parseInt(e.target.value, 10) || 20
-                    )
-                  }
-                  type="number"
-                  value={String(
-                    settings["entitlements.guest.max_messages_per_day"] ?? 20
-                  )}
-                />
-              </div>
-              <div>
-                <Label htmlFor="entitlements.guest.available_chat_model_ids">
-                  Available models (comma-separated)
-                </Label>
-                <Input
-                  id="entitlements.guest.available_chat_model_ids"
-                  onChange={(e) =>
-                    updateArray(
-                      "entitlements.guest.available_chat_model_ids",
-                      e.target.value
-                    )
-                  }
-                  placeholder="chat-model, film-agent"
-                  value={
-                    Array.isArray(
-                      settings["entitlements.guest.available_chat_model_ids"]
-                    )
-                      ? (
-                          settings[
-                            "entitlements.guest.available_chat_model_ids"
-                          ] as string[]
-                        ).join(", ")
-                      : "chat-model, film-agent"
-                  }
-                />
-              </div>
-            </div>
+            <Label htmlFor="entitlements.guest.max_messages_per_day">
+              Max messages per day
+            </Label>
+            <Input
+              id="entitlements.guest.max_messages_per_day"
+              min={0}
+              onChange={(e) =>
+                updateLocal(
+                  "entitlements.guest.max_messages_per_day",
+                  Number.parseInt(e.target.value, 10) || 20
+                )
+              }
+              type="number"
+              value={String(
+                settings["entitlements.guest.max_messages_per_day"] ?? 20
+              )}
+            />
           </div>
           <div>
             <h3 className="mb-2 font-medium text-sm">Regular</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="entitlements.regular.max_messages_per_day">
-                  Max messages per day
-                </Label>
-                <Input
-                  id="entitlements.regular.max_messages_per_day"
-                  min={0}
-                  onChange={(e) =>
-                    updateLocal(
-                      "entitlements.regular.max_messages_per_day",
-                      Number.parseInt(e.target.value, 10) || 100
-                    )
-                  }
-                  type="number"
-                  value={String(
-                    settings["entitlements.regular.max_messages_per_day"] ?? 100
-                  )}
-                />
-              </div>
-              <div>
-                <Label htmlFor="entitlements.regular.available_chat_model_ids">
-                  Available models (comma-separated)
-                </Label>
-                <Input
-                  id="entitlements.regular.available_chat_model_ids"
-                  onChange={(e) =>
-                    updateArray(
-                      "entitlements.regular.available_chat_model_ids",
-                      e.target.value
-                    )
-                  }
-                  placeholder="chat-model, film-agent"
-                  value={
-                    Array.isArray(
-                      settings["entitlements.regular.available_chat_model_ids"]
-                    )
-                      ? (
-                          settings[
-                            "entitlements.regular.available_chat_model_ids"
-                          ] as string[]
-                        ).join(", ")
-                      : "chat-model, film-agent"
-                  }
-                />
-              </div>
-            </div>
+            <Label htmlFor="entitlements.regular.max_messages_per_day">
+              Max messages per day
+            </Label>
+            <Input
+              id="entitlements.regular.max_messages_per_day"
+              min={0}
+              onChange={(e) =>
+                updateLocal(
+                  "entitlements.regular.max_messages_per_day",
+                  Number.parseInt(e.target.value, 10) || 100
+                )
+              }
+              type="number"
+              value={String(
+                settings["entitlements.regular.max_messages_per_day"] ?? 100
+              )}
+            />
           </div>
         </div>
       </section>
