@@ -19,6 +19,8 @@ export const shots = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     historicContext: text("historic_context"),
+    aestheticCriticalCommentary: text("aesthetic_critical_commentary"),
+    productionCommentary: text("production_commentary"),
     vimeoUrl: text("vimeo_url"),
     date: text("date"),
     place: text("place"),

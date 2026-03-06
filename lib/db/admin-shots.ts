@@ -26,6 +26,8 @@ function buildTextToEmbed(shot: {
   title: string;
   description: string | null;
   historicContext: string | null;
+  aestheticCriticalCommentary: string | null;
+  productionCommentary: string | null;
   place: string | null;
   author: string | null;
   date: string | null;
@@ -36,6 +38,8 @@ function buildTextToEmbed(shot: {
     shot.title,
     shot.description,
     shot.historicContext,
+    shot.aestheticCriticalCommentary,
+    shot.productionCommentary,
     shot.place,
     shot.author,
     shot.date,
@@ -83,6 +87,8 @@ export async function upsertShotWithEmbeddings(
     title: data.title,
     description: data.description ?? null,
     historicContext: data.historicContext ?? null,
+    aestheticCriticalCommentary: data.aestheticCriticalCommentary ?? null,
+    productionCommentary: data.productionCommentary ?? null,
     vimeoUrl: data.vimeoUrl ?? null,
     date: data.date ?? null,
     place: data.place ?? null,
@@ -151,6 +157,8 @@ function buildMarkdownFromShot(shot: {
   title: string;
   description?: string | null;
   historicContext?: string | null;
+  aestheticCriticalCommentary?: string | null;
+  productionCommentary?: string | null;
   vimeoUrl?: string | null;
   date?: string | null;
   place?: string | null;
@@ -168,6 +176,8 @@ function buildMarkdownFromShot(shot: {
     author: shot.author ?? undefined,
     description: shot.description ?? undefined,
     historic_context: shot.historicContext ?? undefined,
+    aesthetic_critical_commentary: shot.aestheticCriticalCommentary ?? undefined,
+    production_commentary: shot.productionCommentary ?? undefined,
     tags: tags.length > 0 ? tags : undefined,
   };
 

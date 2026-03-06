@@ -38,6 +38,8 @@ type ShotData = {
   title: string;
   description: string | null;
   historicContext: string | null;
+  aestheticCriticalCommentary: string | null;
+  productionCommentary: string | null;
   vimeoUrl: string | null;
   date: string | null;
   place: string | null;
@@ -64,6 +66,9 @@ export function ShotEditForm({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
     historicContext: initialData?.historicContext ?? "",
+    aestheticCriticalCommentary:
+      initialData?.aestheticCriticalCommentary ?? "",
+    productionCommentary: initialData?.productionCommentary ?? "",
     vimeoUrl: initialData?.vimeoUrl ?? "",
     date: initialData?.date ?? "",
     place: initialData?.place ?? "",
@@ -79,6 +84,9 @@ export function ShotEditForm({
     form.title !== initialForm.title ||
     form.description !== initialForm.description ||
     form.historicContext !== initialForm.historicContext ||
+    form.aestheticCriticalCommentary !==
+      initialForm.aestheticCriticalCommentary ||
+    form.productionCommentary !== initialForm.productionCommentary ||
     form.vimeoUrl !== initialForm.vimeoUrl ||
     form.date !== initialForm.date ||
     form.place !== initialForm.place ||
@@ -125,6 +133,9 @@ export function ShotEditForm({
         title: form.title,
         description: form.description || null,
         historicContext: form.historicContext || null,
+        aestheticCriticalCommentary:
+          form.aestheticCriticalCommentary || null,
+        productionCommentary: form.productionCommentary || null,
         vimeoUrl: form.vimeoUrl || null,
         date: form.date || null,
         place: form.place || null,
@@ -284,6 +295,42 @@ export function ShotEditForm({
           placeholder="Historical or contextual background for this shot"
           rows={10}
           value={form.historicContext}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="aestheticCriticalCommentary">
+          Aesthetic-critical commentary
+        </Label>
+        <textarea
+          className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          id="aestheticCriticalCommentary"
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              aestheticCriticalCommentary: e.target.value,
+            }))
+          }
+          placeholder="Aesthetic and critical analysis of the shot"
+          rows={10}
+          value={form.aestheticCriticalCommentary}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="productionCommentary">Production commentary</Label>
+        <textarea
+          className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          id="productionCommentary"
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              productionCommentary: e.target.value,
+            }))
+          }
+          placeholder="Production context, techniques, or technical notes"
+          rows={10}
+          value={form.productionCommentary}
         />
       </div>
 

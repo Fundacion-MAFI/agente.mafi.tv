@@ -29,6 +29,8 @@ function buildTextToEmbed(shot: Shot): string {
     shot.title,
     shot.description,
     shot.historicContext,
+    shot.aestheticCriticalCommentary,
+    shot.productionCommentary,
     shot.place,
     shot.author,
     shot.date,

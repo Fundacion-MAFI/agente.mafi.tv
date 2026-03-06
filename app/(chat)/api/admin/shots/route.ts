@@ -44,6 +44,8 @@ export async function POST(request: Request) {
     title: string;
     description?: string | null;
     historicContext?: string | null;
+    aestheticCriticalCommentary?: string | null;
+    productionCommentary?: string | null;
     vimeoUrl?: string | null;
     date?: string | null;
     place?: string | null;
@@ -77,6 +79,8 @@ export async function POST(request: Request) {
       title: title.trim(),
       description: body.description ?? null,
       historicContext: body.historicContext ?? null,
+      aestheticCriticalCommentary: body.aestheticCriticalCommentary ?? null,
+      productionCommentary: body.productionCommentary ?? null,
       vimeoUrl: body.vimeoUrl ?? null,
       date: body.date ?? null,
       place: body.place ?? null,

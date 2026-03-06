@@ -121,6 +121,9 @@ function serializeShotsForPrompt(
       geotag: shot.geotag,
       tags: shot.tags,
       excerpt: shot.chunkContent,
+      historicContext: shot.historicContext,
+      aestheticCriticalCommentary: shot.aestheticCriticalCommentary,
+      productionCommentary: shot.productionCommentary,
       similarity: shot.similarity,
     })),
   };

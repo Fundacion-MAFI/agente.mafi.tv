@@ -56,6 +56,8 @@ export async function PATCH(
     title?: string;
     description?: string | null;
     historicContext?: string | null;
+    aestheticCriticalCommentary?: string | null;
+    productionCommentary?: string | null;
     vimeoUrl?: string | null;
     date?: string | null;
     place?: string | null;
@@ -84,6 +86,14 @@ export async function PATCH(
       body.historicContext !== undefined
         ? body.historicContext
         : existing.historicContext,
+    aestheticCriticalCommentary:
+      body.aestheticCriticalCommentary !== undefined
+        ? body.aestheticCriticalCommentary
+        : existing.aestheticCriticalCommentary,
+    productionCommentary:
+      body.productionCommentary !== undefined
+        ? body.productionCommentary
+        : existing.productionCommentary,
     vimeoUrl: body.vimeoUrl !== undefined ? body.vimeoUrl : existing.vimeoUrl,
     date: body.date !== undefined ? body.date : existing.date,
     place: body.place !== undefined ? body.place : existing.place,
