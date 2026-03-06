@@ -5,7 +5,6 @@ import {
   getShotBySlug,
   upsertShotWithEmbeddings,
 } from "@/lib/db/admin-shots";
-import { syncShotToGitHub } from "@/lib/github/sync-shot";
 
 export async function GET(
   request: Request,
@@ -57,6 +56,8 @@ export async function PATCH(
     title?: string;
     description?: string | null;
     historicContext?: string | null;
+    aestheticCriticalCommentary?: string | null;
+    productionCommentary?: string | null;
     vimeoUrl?: string | null;
     date?: string | null;
     place?: string | null;
@@ -85,6 +86,14 @@ export async function PATCH(
       body.historicContext !== undefined
         ? body.historicContext
         : existing.historicContext,
+    aestheticCriticalCommentary:
+      body.aestheticCriticalCommentary !== undefined
+        ? body.aestheticCriticalCommentary
+        : existing.aestheticCriticalCommentary,
+    productionCommentary:
+      body.productionCommentary !== undefined
+        ? body.productionCommentary
+        : existing.productionCommentary,
     vimeoUrl: body.vimeoUrl !== undefined ? body.vimeoUrl : existing.vimeoUrl,
     date: body.date !== undefined ? body.date : existing.date,
     place: body.place !== undefined ? body.place : existing.place,
@@ -94,21 +103,8 @@ export async function PATCH(
   };
 
   try {
-    const shot = await upsertShotWithEmbeddings(updates);
-
-    const sync = await syncShotToGitHub(shot, "update");
-    if (!sync.ok) {
-      console.warn("GitHub sync failed after DB update:", sync.error);
-      return NextResponse.json(
-        {
-          shot,
-          warning: `Shot saved to DB but GitHub sync failed: ${sync.error}`,
-        },
-        { status: 200 }
-      );
-    }
-
-    return NextResponse.json(shot);
+    const { shot, modelId } = await upsertShotWithEmbeddings(updates);
+    return NextResponse.json({ ...shot, embeddingModel: modelId });
   } catch (error) {
     console.error("Admin update shot error:", error);
     return NextResponse.json(
@@ -139,18 +135,6 @@ export async function DELETE(
     const shot = await deleteShotBySlug(slug);
     if (!shot) {
       return NextResponse.json({ error: "Shot not found" }, { status: 404 });
-    }
-
-    const sync = await syncShotToGitHub(shot, "delete");
-    if (!sync.ok) {
-      console.warn("GitHub sync failed after DB delete:", sync.error);
-      return NextResponse.json(
-        {
-          message: "Shot deleted from DB",
-          warning: `GitHub sync failed: ${sync.error}`,
-        },
-        { status: 200 }
-      );
     }
 
     return NextResponse.json({ message: "Shot deleted" });

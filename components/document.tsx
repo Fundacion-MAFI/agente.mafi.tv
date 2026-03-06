@@ -57,7 +57,6 @@ function PureDocumentToolResult({
   return (
     <button
       className="flex w-fit cursor-pointer flex-row items-start gap-3 rounded-[var(--radius-input)] border border-border px-3 py-2"
-      style={{ backgroundColor: accentBg }}
       onClick={(event) => {
         if (isReadonly) {
           toast.error(
@@ -85,6 +84,7 @@ function PureDocumentToolResult({
           boundingBox,
         }));
       }}
+      style={{ backgroundColor: accentBg }}
       type="button"
     >
       <div className="mt-1 text-muted-foreground">

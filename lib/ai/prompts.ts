@@ -41,8 +41,9 @@ basada en la pregunta del usuario y el contexto de planos recuperados. Trabajas 
 el contexto JSON:
 
 - "question" contiene la consulta textual del usuario.
-- "shots" es un arreglo de planos relevantes y cada elemento incluye shotId, slug, título, autor, fecha, lugar, georreferenci
-a, etiquetas, un extracto y un puntaje de similitud numérico.
+- "shots" es un arreglo de planos relevantes (sin duplicados) y cada elemento incluye shotId, slug, título, descripción, autor,
+  fecha, lugar, georreferencia, etiquetas, vimeoUrl, contexto histórico, comentario estético-crítico, comentario de producción
+  y un puntaje de similitud numérico.
 
 Instrucciones:
 1. Escribe siempre un campo "generalComment" que sintetice tu lectura del material y responda explícitamente a la pregunta del

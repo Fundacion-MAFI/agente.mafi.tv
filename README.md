@@ -144,13 +144,7 @@ Modify the stop conditions or summary helpers to make replies shorter, longer, o
 
 ### Ingestion
 
-The MAFI archive is stored as Markdown files in:
-
-```bash
-data/mafi-shots/
-```
-
-The ingestion script:
+The MAFI archive is stored in the database. The ingestion script:
 
 ```ts
 // scripts/ingest-mafi-shots.ts
@@ -158,12 +152,11 @@ The ingestion script:
 
 does the following:
 
-1. Reads Markdown files from `data/mafi-shots`.
-2. Normalizes metadata.
-3. Computes embeddings via `generateShotEmbeddings`.
-4. Upserts both shots and their vectors into Postgres tables.
+1. Reads shots from the database.
+2. Computes embeddings via `generateShotEmbeddings` for the model selected in Settings.
+3. Upserts embeddings into Postgres vector tables.
 
-You can point this script to a different directory or schema to onboard another corpus.
+Run `pnpm ingest:mafi` to refresh embeddings (e.g. after changing the embedding model or chunk settings).
 
 ### Retrieval
 
@@ -240,11 +233,9 @@ http://localhost:3000
 
 ---
 
-d
-
 ## Archive Ingestion Workflow
 
-The MAFI archive in `data/mafi-shots/` is ingested automatically after `pnpm install` thanks to the `postinstall` script:
+The database is the single source of truth for MAFI shots. Ingestion runs automatically after `pnpm install` thanks to the `postinstall` script:
 
 ```bash
 pnpm db:migrate && pnpm ingest:mafi
@@ -256,34 +247,27 @@ The ingestion script:
 
 * Verifies that the shots tables exist
 * Instructs you to run the migration if they are missing
+* Reads shots from the database and refreshes embeddings for the selected model
 
-You can also run the ingestion manually whenever you add or update Markdown files to refresh the database incrementally:
+Run ingestion manually to refresh embeddings after changing the embedding model or chunk settings:
 
 ```bash
 pnpm ingest:mafi
-```
-
-To remove database records for files that no longer exist locally, pass the `--prune` flag:
-
-```bash
-pnpm ingest:mafi -- --prune
 ```
 
 ---
 
 ## Admin Panel
 
-The admin panel at `/admin` lets you manage MAFI shots with dual-write to the database and Git.
+The admin panel at `/admin` lets you manage MAFI shots in the database.
 
 ### Setup
 
 1. **Admin access** — Add your email to `ADMIN_EMAILS` (comma-separated) in `.env`.
-2. **GitHub sync** — Set `GITHUB_TOKEN` (repo scope) and `GITHUB_REPO` (e.g. `owner/repo`) so edits are committed to `data/mafi-shots/`.
-3. **Branch** (optional) — Set `GITHUB_BRANCH` to target a specific branch. Omitted = repo default. Use `dev` in `.env.local` and `main` in production.
-4. **API key** (optional) — Set `ADMIN_API_KEY` for script/automation access. Use header `Authorization: Bearer <key>` or `X-Admin-API-Key`.
+2. **API key** (optional) — Set `ADMIN_API_KEY` for script/automation access. Use header `Authorization: Bearer <key>` or `X-Admin-API-Key`.
 
 ### Features
 
 - List, create, edit, and delete shots
-- Edits update Neon DB and sync to the repo via GitHub API
+- Edits update Neon DB directly
 - Embeddings are recomputed on create/update

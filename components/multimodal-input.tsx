@@ -261,12 +261,12 @@ function PureStopButton({
     <Button
       className="h-11 w-full rounded-[var(--radius-button)] bg-foreground text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
       data-testid="stop-button"
-      type="button"
       onClick={(event) => {
         event.preventDefault();
         stop();
         setMessages((messages) => messages);
       }}
+      type="button"
     >
       <StopIcon size={14} />
       <span className="ml-2">Detener</span>

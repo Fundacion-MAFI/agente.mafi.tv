@@ -13,10 +13,7 @@ type SuggestedActionsProps = {
   selectedVisibilityType: VisibilityType;
 };
 
-function PureSuggestedActions({
-  chatId,
-  sendMessage,
-}: SuggestedActionsProps) {
+function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const suggestedActions = [
     "Muéstrame planos sobre protestas.",
     "Planos grabados cerca de mi ubicación.",

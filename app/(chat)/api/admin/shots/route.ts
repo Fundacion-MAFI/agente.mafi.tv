@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { listShots, upsertShotWithEmbeddings } from "@/lib/db/admin-shots";
-import { syncShotToGitHub } from "@/lib/github/sync-shot";
 
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
@@ -45,6 +44,8 @@ export async function POST(request: Request) {
     title: string;
     description?: string | null;
     historicContext?: string | null;
+    aestheticCriticalCommentary?: string | null;
+    productionCommentary?: string | null;
     vimeoUrl?: string | null;
     date?: string | null;
     place?: string | null;
@@ -73,11 +74,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const shot = await upsertShotWithEmbeddings({
+    const { shot, modelId } = await upsertShotWithEmbeddings({
       slug: slugSafe,
       title: title.trim(),
       description: body.description ?? null,
       historicContext: body.historicContext ?? null,
+      aestheticCriticalCommentary: body.aestheticCriticalCommentary ?? null,
+      productionCommentary: body.productionCommentary ?? null,
       vimeoUrl: body.vimeoUrl ?? null,
       date: body.date ?? null,
       place: body.place ?? null,
@@ -86,19 +89,10 @@ export async function POST(request: Request) {
       tags: body.tags ?? [],
     });
 
-    const sync = await syncShotToGitHub(shot, "create");
-    if (!sync.ok) {
-      console.warn("GitHub sync failed after DB update:", sync.error);
-      return NextResponse.json(
-        {
-          shot,
-          warning: `Shot saved to DB but GitHub sync failed: ${sync.error}`,
-        },
-        { status: 201 }
-      );
-    }
-
-    return NextResponse.json(shot, { status: 201 });
+    return NextResponse.json(
+      { ...shot, embeddingModel: modelId },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Admin create shot error:", error);
     return NextResponse.json(

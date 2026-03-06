@@ -112,7 +112,8 @@ export function AdminNav() {
                     aria-hidden
                     className="size-1.5 animate-pulse rounded-full bg-amber-500"
                   />
-                  Ingesting{progress ? ` ${progress.current}/${progress.total}` : "…"}
+                  Ingesting
+                  {progress ? ` ${progress.current}/${progress.total}` : "…"}
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="bottom">

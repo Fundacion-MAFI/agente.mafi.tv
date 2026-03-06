@@ -7,6 +7,7 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseMarkdownToShot, shotToMarkdown } from "@/lib/shot-markdown";
 
 function normalizeTagsForCompare(tags: string | string[]): string {
   const arr = (
@@ -19,6 +20,17 @@ function normalizeTagsForCompare(tags: string | string[]): string {
   ).sort();
   return arr.join(",");
 }
+
+const EMBEDDING_MODEL_LABELS: Record<string, string> = {
+  "openai/text-embedding-3-small": "OpenAI 3 Small",
+  "openai/text-embedding-3-large": "OpenAI 3 Large",
+  "mistral/mistral-embed": "Mistral Embed",
+  "google/gemini-embedding-001": "Google Gemini",
+  "google/text-multilingual-embedding-002": "Google Multilingual 002",
+  "google/text-embedding-005": "Google Embedding 005",
+  "alibaba/qwen3-embedding-4b": "Alibaba Qwen3 4B",
+  "amazon/titan-embed-text-v2": "Amazon Titan v2",
+};
 
 function extractVimeoId(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
@@ -38,6 +50,8 @@ type ShotData = {
   title: string;
   description: string | null;
   historicContext: string | null;
+  aestheticCriticalCommentary: string | null;
+  productionCommentary: string | null;
   vimeoUrl: string | null;
   date: string | null;
   place: string | null;
@@ -64,6 +78,8 @@ export function ShotEditForm({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
     historicContext: initialData?.historicContext ?? "",
+    aestheticCriticalCommentary: initialData?.aestheticCriticalCommentary ?? "",
+    productionCommentary: initialData?.productionCommentary ?? "",
     vimeoUrl: initialData?.vimeoUrl ?? "",
     date: initialData?.date ?? "",
     place: initialData?.place ?? "",
@@ -79,6 +95,9 @@ export function ShotEditForm({
     form.title !== initialForm.title ||
     form.description !== initialForm.description ||
     form.historicContext !== initialForm.historicContext ||
+    form.aestheticCriticalCommentary !==
+      initialForm.aestheticCriticalCommentary ||
+    form.productionCommentary !== initialForm.productionCommentary ||
     form.vimeoUrl !== initialForm.vimeoUrl ||
     form.date !== initialForm.date ||
     form.place !== initialForm.place ||
@@ -125,6 +144,8 @@ export function ShotEditForm({
         title: form.title,
         description: form.description || null,
         historicContext: form.historicContext || null,
+        aestheticCriticalCommentary: form.aestheticCriticalCommentary || null,
+        productionCommentary: form.productionCommentary || null,
         vimeoUrl: form.vimeoUrl || null,
         date: form.date || null,
         place: form.place || null,
@@ -145,6 +166,16 @@ export function ShotEditForm({
         }
         if (data.warning) {
           toast({ type: "warning", description: data.warning });
+        } else {
+          const modelLabel =
+            typeof data.embeddingModel === "string"
+              ? (EMBEDDING_MODEL_LABELS[data.embeddingModel] ??
+                data.embeddingModel)
+              : "selected model";
+          toast({
+            type: "success",
+            description: `Shot updated & embeddings regenerated for ${modelLabel}.`,
+          });
         }
         return;
       }
@@ -161,6 +192,16 @@ export function ShotEditForm({
       }
       if (data.warning) {
         toast({ type: "warning", description: data.warning });
+      } else {
+        const modelLabel =
+          typeof data.embeddingModel === "string"
+            ? (EMBEDDING_MODEL_LABELS[data.embeddingModel] ??
+              data.embeddingModel)
+            : "selected model";
+        toast({
+          type: "success",
+          description: `Shot created & embeddings generated for ${modelLabel}.`,
+        });
       }
       return data.slug as string;
     } finally {
@@ -217,6 +258,42 @@ export function ShotEditForm({
   };
 
   const vimeoId = extractVimeoId(form.vimeoUrl);
+  const [markdownDragging, setMarkdownDragging] = useState(false);
+
+  const applyMarkdownToForm = (md: string) => {
+    const parsed = parseMarkdownToShot(md);
+    const hasUpdates = Object.keys(parsed).length > 0;
+    if (hasUpdates) {
+      setForm((f) => ({
+        ...f,
+        title: parsed.title ?? f.title,
+        description: parsed.description ?? f.description ?? "",
+        historicContext:
+          parsed.historicContext ?? f.historicContext ?? "",
+        aestheticCriticalCommentary:
+          parsed.aestheticCriticalCommentary ??
+          f.aestheticCriticalCommentary ??
+          "",
+        productionCommentary:
+          parsed.productionCommentary ?? f.productionCommentary ?? "",
+        vimeoUrl: parsed.vimeoUrl ?? f.vimeoUrl ?? "",
+        date: parsed.date ?? f.date ?? "",
+        place: parsed.place ?? f.place ?? "",
+        author: parsed.author ?? f.author ?? "",
+        geotag: parsed.geotag ?? f.geotag ?? "",
+        tags: (parsed.tags ?? []).join(", "),
+      }));
+      toast({
+        type: "success",
+        description: "Form updated from Markdown.",
+      });
+    } else {
+      toast({
+        type: "error",
+        description: "Could not parse Markdown. Check the format.",
+      });
+    }
+  };
 
   return (
     <form className="max-w-2xl space-y-4" onSubmit={handleSubmit}>
@@ -287,6 +364,42 @@ export function ShotEditForm({
         />
       </div>
 
+      <div className="grid gap-2">
+        <Label htmlFor="aestheticCriticalCommentary">
+          Aesthetic-critical commentary
+        </Label>
+        <textarea
+          className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          id="aestheticCriticalCommentary"
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              aestheticCriticalCommentary: e.target.value,
+            }))
+          }
+          placeholder="Aesthetic and critical analysis of the shot"
+          rows={10}
+          value={form.aestheticCriticalCommentary}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="productionCommentary">Production commentary</Label>
+        <textarea
+          className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          id="productionCommentary"
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              productionCommentary: e.target.value,
+            }))
+          }
+          placeholder="Production context, techniques, or technical notes"
+          rows={10}
+          value={form.productionCommentary}
+        />
+      </div>
+
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
           <Label htmlFor="date">Date</Label>
@@ -354,6 +467,134 @@ export function ShotEditForm({
           placeholder="bicentenario, bandera"
           value={form.tags}
         />
+      </div>
+
+      <div className="space-y-4 rounded-lg border border-dashed p-4">
+        <h3 className="font-medium text-sm">Markdown</h3>
+        <p className="text-muted-foreground text-xs">
+          Export as Markdown, or paste/drop a .md file to update the form.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => {
+              const md = shotToMarkdown({
+                slug: form.slug || undefined,
+                title: form.title,
+                description: form.description || null,
+                historicContext: form.historicContext || null,
+                aestheticCriticalCommentary:
+                  form.aestheticCriticalCommentary || null,
+                productionCommentary: form.productionCommentary || null,
+                vimeoUrl: form.vimeoUrl || null,
+                date: form.date || null,
+                place: form.place || null,
+                author: form.author || null,
+                geotag: form.geotag || null,
+                tags: form.tags
+                  .split(",")
+                  .map((t) => t.trim())
+                  .filter(Boolean),
+              });
+              const blob = new Blob([md], { type: "text/markdown" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `${form.slug || "shot"}.md`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast({ type: "success", description: "Markdown downloaded." });
+            }}
+            type="button"
+            variant="outline"
+          >
+            Export to Markdown
+          </Button>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="markdown-paste">Update from Markdown</Label>
+          <div
+            className="relative"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMarkdownDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMarkdownDragging(false);
+            }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMarkdownDragging(false);
+              const file = e.dataTransfer.files?.[0];
+              if (!file) return;
+              const isMd =
+                file.name.toLowerCase().endsWith(".md") ||
+                file.type === "text/markdown" ||
+                file.type === "text/x-markdown";
+              if (!isMd) {
+                toast({
+                  type: "error",
+                  description: "Please drop a .md file.",
+                });
+                return;
+              }
+              try {
+                const md = await file.text();
+                applyMarkdownToForm(md);
+              } catch {
+                toast({
+                  type: "error",
+                  description: "Could not read file.",
+                });
+              }
+            }}
+          >
+            <textarea
+              className={`flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                markdownDragging
+                  ? "border-primary ring-2 ring-primary/20"
+                  : ""
+              }`}
+              id="markdown-paste"
+              placeholder="Paste Markdown or drop a .md file here, then click Apply…"
+              rows={6}
+            />
+            {markdownDragging && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md border-2 border-dashed border-primary bg-primary/10"
+              >
+                <span className="text-muted-foreground text-sm">
+                  Drop .md file to apply
+                </span>
+              </div>
+            )}
+          </div>
+          <Button
+            onClick={() => {
+              const textarea = document.getElementById(
+                "markdown-paste"
+              ) as HTMLTextAreaElement | null;
+              const md = textarea?.value?.trim();
+              if (!md) {
+                toast({
+                  type: "error",
+                  description: "Paste Markdown first.",
+                });
+                return;
+              }
+              applyMarkdownToForm(md);
+              if (textarea) textarea.value = "";
+            }}
+            type="button"
+            variant="secondary"
+          >
+            Apply Markdown
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3 pt-4">

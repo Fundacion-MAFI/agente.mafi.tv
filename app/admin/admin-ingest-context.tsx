@@ -41,12 +41,9 @@ export function AdminIngestProvider({ children }: { children: ReactNode }) {
   const [output, setOutput] = useState<string | null>(null);
   const onCompleteRef = useRef<(() => void | Promise<void>) | null>(null);
 
-  const registerOnComplete = useCallback(
-    (fn: () => void | Promise<void>) => {
-      onCompleteRef.current = fn;
-    },
-    []
-  );
+  const registerOnComplete = useCallback((fn: () => void | Promise<void>) => {
+    onCompleteRef.current = fn;
+  }, []);
 
   const unregisterOnComplete = useCallback(() => {
     onCompleteRef.current = null;
@@ -137,8 +134,7 @@ export function AdminIngestProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
-      const errMsg =
-        err instanceof Error ? err.message : "Request failed";
+      const errMsg = err instanceof Error ? err.message : "Request failed";
       setOutput(errMsg);
       toast({ type: "error", description: errMsg });
     } finally {
@@ -158,7 +154,14 @@ export function AdminIngestProvider({ children }: { children: ReactNode }) {
       registerOnComplete,
       unregisterOnComplete,
     }),
-    [running, output, progress, runIngest, registerOnComplete, unregisterOnComplete]
+    [
+      running,
+      output,
+      progress,
+      runIngest,
+      registerOnComplete,
+      unregisterOnComplete,
+    ]
   );
 
   return (

@@ -1,11 +1,6 @@
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import matter from "gray-matter";
 import postgres from "postgres";
-
 import {
   type EmbeddingModelId,
   getEmbeddingDimensions,
@@ -13,7 +8,9 @@ import {
 } from "@/lib/ai/embedding-models";
 import { generateShotEmbeddings } from "@/lib/ai/mafi-embeddings";
 import { embeddingModelMetadata } from "@/lib/db/schema/embedding-metadata";
+import type { Shot } from "@/lib/db/schema/shots";
 import { SHOT_EMBEDDING_TABLES, shots } from "@/lib/db/schema/shots";
+import { computeShotChecksum } from "@/lib/db/shot-checksum";
 
 const INGEST_DEFAULTS = {
   throttleEnabled: true,
@@ -27,21 +24,26 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type ShotFrontMatter = {
-  title?: string;
-  description?: string;
-  historic_context?: string;
-  vimeo_link?: string;
-  date?: string;
-  place?: string;
-  author?: string;
-  geotag?: string;
-  tags?: string[] | string;
-};
+function buildTextToEmbed(shot: Shot): string {
+  return [
+    shot.title,
+    shot.description,
+    shot.historicContext,
+    shot.aestheticCriticalCommentary,
+    shot.productionCommentary,
+    shot.place,
+    shot.author,
+    shot.date,
+    shot.geotag,
+    shot.tags.join(", "),
+  ]
+    .map((s) => s?.trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 export type RunMafiIngestOptions = {
   prune?: boolean;
-  dataDirectory?: string;
   connectionString?: string;
   onLog?: (line: string) => void;
 };
@@ -49,7 +51,7 @@ export type RunMafiIngestOptions = {
 export type RunMafiIngestResult = {
   ok: boolean;
   output: string;
-  filesProcessed: number;
+  shotsProcessed: number;
   embeddingsUpdated: number;
   pruned: number;
   error?: string;
@@ -70,7 +72,6 @@ export async function runMafiIngest(
 ): Promise<RunMafiIngestResult> {
   const {
     prune = false,
-    dataDirectory = path.join(process.cwd(), "data", "mafi-shots"),
     connectionString = process.env.POSTGRES_URL_NON_POOLING ??
       process.env.POSTGRES_URL,
     onLog,
@@ -84,7 +85,7 @@ export async function runMafiIngest(
     return {
       ok: false,
       output: lines.join("\n"),
-      filesProcessed: 0,
+      shotsProcessed: 0,
       embeddingsUpdated: 0,
       pruned: 0,
       error: err,
@@ -107,7 +108,7 @@ export async function runMafiIngest(
       return {
         ok: false,
         output: lines.join("\n"),
-        filesProcessed: 0,
+        shotsProcessed: 0,
         embeddingsUpdated: 0,
         pruned: 0,
         error: err,
@@ -161,109 +162,37 @@ export async function runMafiIngest(
         ? (map["embedding.chunk_overlap"] as number)
         : 200;
 
-    let files: string[];
-    try {
-      const dirFiles = await fs.readdir(dataDirectory);
-      files = dirFiles.filter((f) => f.endsWith(".md")).sort();
-    } catch (err) {
-      const errMsg =
-        err instanceof Error ? err.message : "Failed to read data directory";
-      log(onLog, lines, "❌", errMsg);
-      return {
-        ok: false,
-        output: lines.join("\n"),
-        filesProcessed: 0,
-        embeddingsUpdated: 0,
-        pruned: 0,
-        error: errMsg,
-      };
-    }
+    const allShots = await db.select().from(shots).orderBy(shots.slug);
 
     const dimensions = getEmbeddingDimensions(embeddingModel);
     const embeddingTable =
       SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
 
-    log(onLog, lines, "📼 Ingesting MAFI shots from", dataDirectory);
+    log(onLog, lines, "📼 Ingesting MAFI shots from database");
     log(onLog, lines, "   Embedding model:", embeddingModel);
 
     if (throttle) {
       log(onLog, lines, "⏱️  Throttling enabled:", delay, "ms delay");
     }
 
-    const processedSlugs = new Set<string>();
     let embeddingsUpdated = 0;
 
-    function sha256(content: string) {
-      return crypto.createHash("sha256").update(content).digest("hex");
-    }
+    for (let i = 0; i < allShots.length; i++) {
+      const shot = allShots[i];
+      log(onLog, lines, "📊", `${i + 1}/${allShots.length}`);
+      const slug = shot.slug;
 
-    function normalizeTags(raw: ShotFrontMatter["tags"]): string[] {
-      if (!raw) return [];
-      if (Array.isArray(raw)) {
-        return raw.map((tag) => tag.trim()).filter(Boolean);
+      let shouldUpdateEmbeddings = false;
+      let updateReason:
+        | "no embeddings"
+        | "timestamp check"
+        | "checksum mismatch" = "no embeddings";
+
+      const expectedChecksum = computeShotChecksum(shot);
+      if (expectedChecksum !== shot.checksum) {
+        shouldUpdateEmbeddings = true;
+        updateReason = "checksum mismatch";
       }
-      return raw
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-    }
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      log(onLog, lines, "📊", `${i + 1}/${files.length}`);
-      const slug = path.basename(file, path.extname(file));
-      processedSlugs.add(slug);
-
-      const fullPath = path.join(dataDirectory, file);
-      const fileContent = await fs.readFile(fullPath, "utf8");
-      const checksum = sha256(fileContent);
-      const { data, content } = matter(fileContent);
-      const metadata = data as ShotFrontMatter;
-      const tags = normalizeTags(metadata.tags);
-      const contentBody = content.trim();
-      const description = metadata.description ?? (contentBody || null);
-      const fields = {
-        slug,
-        title: metadata.title ?? slug,
-        description,
-        historicContext: metadata.historic_context ?? null,
-        vimeoUrl: metadata.vimeo_link ?? null,
-        date: metadata.date ?? null,
-        place: metadata.place ?? null,
-        author: metadata.author ?? null,
-        geotag: metadata.geotag ?? null,
-        tags,
-        checksum,
-        updatedAt: new Date(),
-      } satisfies typeof shots.$inferInsert;
-
-      const existing = await db
-        .select({
-          id: shots.id,
-          checksum: shots.checksum,
-          updatedAt: shots.updatedAt,
-        })
-        .from(shots)
-        .where(eq(shots.slug, slug))
-        .limit(1);
-
-      const contentChanged =
-        existing.length === 0 || existing[0].checksum !== checksum;
-
-      const [upserted] = contentChanged
-        ? await db
-            .insert(shots)
-            .values({ ...fields })
-            .onConflictDoUpdate({ target: shots.slug, set: fields })
-            .returning({ id: shots.id })
-        : [{ id: existing[0].id }];
-
-      let shouldUpdateEmbeddings =
-        existing.length === 0 || existing[0].checksum !== checksum;
-      let updateReason: "new" | "hash diff" | "timestamp check" | "no embeddings" =
-        existing.length === 0 ? "new" : "hash diff";
-      let debugShotUpdatedAt: Date | null = null;
-      let debugEmbeddingCreatedAt: Date | null = null;
 
       if (!shouldUpdateEmbeddings && embeddingTable) {
         const existingForModel = await db
@@ -273,7 +202,7 @@ export async function runMafiIngest(
           .from(embeddingTable)
           .where(
             and(
-              eq(embeddingTable.shotId, upserted.id),
+              eq(embeddingTable.shotId, shot.id),
               eq(embeddingTable.modelId, embeddingModel)
             )
           )
@@ -282,19 +211,17 @@ export async function runMafiIngest(
           shouldUpdateEmbeddings = true;
           updateReason = "no embeddings";
         } else {
-          const shotUpdatedAt = existing[0].updatedAt.getTime();
+          const shotUpdatedAt = shot.updatedAt.getTime();
           const embeddingCreatedAt = (
             existingForModel[0] as { createdAt: Date }
           ).createdAt.getTime();
           if (shotUpdatedAt > embeddingCreatedAt) {
             shouldUpdateEmbeddings = true;
             updateReason = "timestamp check";
-            debugShotUpdatedAt = existing[0].updatedAt;
-            debugEmbeddingCreatedAt = (
-              existingForModel[0] as { createdAt: Date }
-            ).createdAt;
           }
         }
+      } else if (!shouldUpdateEmbeddings && !embeddingTable) {
+        shouldUpdateEmbeddings = true;
       }
 
       if (!shouldUpdateEmbeddings) {
@@ -302,45 +229,24 @@ export async function runMafiIngest(
         continue;
       }
 
-      if (updateReason === "hash diff") {
+      if (updateReason === "checksum mismatch") {
+        log(onLog, lines, "   → reason: content changed (checksum mismatch)");
+      } else if (updateReason === "timestamp check") {
         log(
           onLog,
           lines,
-          "   → reason: checksum changed",
-          existing[0].checksum,
-          "→",
-          checksum
-        );
-      } else if (updateReason === "timestamp check" && debugShotUpdatedAt && debugEmbeddingCreatedAt) {
-        log(
-          onLog,
-          lines,
-          "   → reason: shot.updated_at > embedding.created_at",
-          debugShotUpdatedAt.toISOString(),
-          ">",
-          debugEmbeddingCreatedAt.toISOString()
+          "   → reason: shot.updated_at > embedding.created_at"
         );
       } else if (updateReason === "no embeddings") {
-        log(onLog, lines, "   → reason: no embeddings for model", embeddingModel);
-      } else {
-        log(onLog, lines, "   → reason: new shot");
+        log(
+          onLog,
+          lines,
+          "   → reason: no embeddings for model",
+          embeddingModel
+        );
       }
 
-      const textToEmbed = [
-        metadata.title,
-        metadata.description,
-        metadata.historic_context,
-        metadata.place,
-        metadata.author,
-        metadata.date,
-        metadata.geotag,
-        tags.join(", "),
-        contentBody,
-      ]
-        .map((s) => s?.trim())
-        .filter(Boolean)
-        .join("\n\n");
-
+      const textToEmbed = buildTextToEmbed(shot);
       const embeddingChunks = await generateShotEmbeddings(textToEmbed, {
         chunkSize,
         chunkOverlap,
@@ -353,48 +259,57 @@ export async function runMafiIngest(
             .delete(embeddingTable)
             .where(
               and(
-                eq(embeddingTable.shotId, upserted.id),
+                eq(embeddingTable.shotId, shot.id),
                 eq(embeddingTable.modelId, embeddingModel)
               )
             );
           if (embeddingChunks.length > 0) {
             await tx.insert(embeddingTable).values(
               embeddingChunks.map((chunk) => ({
-                shotId: upserted.id,
+                shotId: shot.id,
                 content: chunk.content,
                 embedding: chunk.embedding,
                 modelId: embeddingModel,
               }))
             );
           }
+          if (updateReason === "checksum mismatch") {
+            await tx
+              .update(shots)
+              .set({ checksum: expectedChecksum })
+              .where(eq(shots.id, shot.id));
+          }
         });
       }
 
       embeddingsUpdated += 1;
-      log(onLog, lines, "✅ Updated embeddings for shot", slug, `(${updateReason})`);
+      log(
+        onLog,
+        lines,
+        "✅ Updated embeddings for shot",
+        slug,
+        `(${updateReason})`
+      );
 
       if (throttle && delay > 0) {
         await sleep(delay);
       }
     }
 
-    let pruned = 0;
+    const pruned = 0;
     if (prune) {
-      const existing = await db.select({ slug: shots.slug }).from(shots);
-      const toDelete = existing
-        .map((r) => r.slug)
-        .filter((s) => !processedSlugs.has(s));
-      if (toDelete.length > 0) {
-        await db.delete(shots).where(inArray(shots.slug, toDelete));
-        pruned = toDelete.length;
-      }
+      log(
+        onLog,
+        lines,
+        "⚠️ Prune is ignored (database is the single source of truth)"
+      );
     }
 
     log(
       onLog,
       lines,
       "🏁 Processed",
-      files.length,
+      allShots.length,
       "shots, refreshed embeddings for",
       embeddingsUpdated,
       "pruned",
@@ -405,15 +320,15 @@ export async function runMafiIngest(
       .insert(embeddingModelMetadata)
       .values({
         modelId: embeddingModel,
-        chunkSize: chunkSize,
-        chunkOverlap: chunkOverlap,
+        chunkSize,
+        chunkOverlap,
         embeddedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: embeddingModelMetadata.modelId,
         set: {
-          chunkSize: chunkSize,
-          chunkOverlap: chunkOverlap,
+          chunkSize,
+          chunkOverlap,
           embeddedAt: new Date(),
         },
       });
@@ -423,7 +338,7 @@ export async function runMafiIngest(
     return {
       ok: true,
       output: lines.join("\n"),
-      filesProcessed: files.length,
+      shotsProcessed: allShots.length,
       embeddingsUpdated,
       pruned,
     };
@@ -435,7 +350,7 @@ export async function runMafiIngest(
     return {
       ok: false,
       output: lines.join("\n"),
-      filesProcessed: 0,
+      shotsProcessed: 0,
       embeddingsUpdated: 0,
       pruned: 0,
       error: errMsg,

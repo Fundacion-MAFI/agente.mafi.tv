@@ -14,6 +14,21 @@ import {
 } from "@/components/ui/select";
 import { useAdminDirty } from "../admin-dirty-context";
 
+const CHAT_MODELS = [
+  { id: "xai/grok-4.1-fast-non-reasoning", label: "xAI Grok 4.1 Fast (non-reasoning)" },
+  { id: "xai/grok-4.1-fast-reasoning", label: "xAI Grok 4.1 Fast (reasoning)" },
+  { id: "openai/gpt-5.2", label: "OpenAI GPT-5.2" },
+  { id: "openai/gpt-5.4", label: "OpenAI GPT-5.4" },
+  { id: "openai/gpt-5-mini", label: "OpenAI GPT-5 Mini" },
+  { id: "anthropic/claude-opus-4.6", label: "Anthropic Claude Opus 4.6" },
+  { id: "anthropic/claude-sonnet-4.6", label: "Anthropic Claude Sonnet 4.6" },
+  { id: "google/gemini-3-flash", label: "Google Gemini 3 Flash" },
+  { id: "google/gemini-2.5-flash", label: "Google Gemini 2.5 Flash" },
+  { id: "google/gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
+] as const;
+
+const CHAT_MODEL_IDS: readonly string[] = CHAT_MODELS.map((m) => m.id);
+
 const EMBEDDING_MODELS = [
   { id: "openai/text-embedding-3-small", label: "OpenAI 3 Small (1536)" },
   { id: "openai/text-embedding-3-large", label: "OpenAI 3 Large (3072)" },
@@ -182,14 +197,6 @@ export function SettingsForm() {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : null));
   };
 
-  const updateArray = (key: string, value: string) => {
-    const arr = value
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    setSettings((prev) => (prev ? { ...prev, [key]: arr } : null));
-  };
-
   async function handleSave() {
     if (!settings) return;
     setSaving(true);
@@ -239,9 +246,9 @@ export function SettingsForm() {
         handleSave();
       }}
     >
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Prompts</h2>
-        <div className="space-y-4">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Prompts</h2>
+        <div className="space-y-4 p-4">
           {PROMPT_KEYS.map((key) => (
             <div className="grid gap-2" key={key}>
               <div className="flex items-center justify-between">
@@ -274,89 +281,93 @@ export function SettingsForm() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Embedding & Chunking</h2>
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="embedding.model">Retrieval model</Label>
-            <Select
-              onValueChange={(value) => updateLocal("embedding.model", value)}
-              value={String(
-                settings["embedding.model"] ?? "openai/text-embedding-3-small"
-              )}
-            >
-              <SelectTrigger id="embedding.model" className="w-[280px]">
-                <SelectValue placeholder="Select model" />
-              </SelectTrigger>
-              <SelectContent>
-                {EMBEDDING_MODELS.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {embeddingsStatus && (
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm ${
-                  embeddingsStatus.isReady
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                }`}
-              >
-                {embeddingsStatus.isReady ? (
-                  <>
-                    <span aria-hidden>✓</span>
-                    {embeddingsStatus.embeddingCount} shots
-                  </>
-                ) : (
-                  <>
-                    <span aria-hidden>⚠</span>
-                    {embeddingsStatus.embeddingCount}/{embeddingsStatus.shotCount}{" "}
-                    shots
-                  </>
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">
+          Embedding & Chunking
+        </h2>
+        <div className="space-y-4 p-4">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="embedding.model">Retrieval model</Label>
+              <Select
+                onValueChange={(value) => updateLocal("embedding.model", value)}
+                value={String(
+                  settings["embedding.model"] ?? "openai/text-embedding-3-small"
                 )}
-              </span>
-            )}
+              >
+                <SelectTrigger className="w-[280px]" id="embedding.model">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMBEDDING_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {embeddingsStatus && (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm ${
+                    embeddingsStatus.isReady
+                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {embeddingsStatus.isReady ? (
+                    <>
+                      <span aria-hidden>✓</span>
+                      {embeddingsStatus.embeddingCount} shots
+                    </>
+                  ) : (
+                    <>
+                      <span aria-hidden>⚠</span>
+                      {embeddingsStatus.embeddingCount}/
+                      {embeddingsStatus.shotCount} shots
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="embedding.chunk_size">Chunk size</Label>
-            <Input
-              id="embedding.chunk_size"
-              min={100}
-              onChange={(e) =>
-                updateLocal(
-                  "embedding.chunk_size",
-                  Number.parseInt(e.target.value, 10) || 800
-                )
-              }
-              type="number"
-              value={String(settings["embedding.chunk_size"] ?? 800)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="embedding.chunk_overlap">Chunk overlap</Label>
-            <Input
-              id="embedding.chunk_overlap"
-              min={0}
-              onChange={(e) =>
-                updateLocal(
-                  "embedding.chunk_overlap",
-                  Number.parseInt(e.target.value, 10) || 200
-                )
-              }
-              type="number"
-              value={String(settings["embedding.chunk_overlap"] ?? 200)}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="embedding.chunk_size">Chunk size</Label>
+              <Input
+                id="embedding.chunk_size"
+                min={100}
+                onChange={(e) =>
+                  updateLocal(
+                    "embedding.chunk_size",
+                    Number.parseInt(e.target.value, 10) || 800
+                  )
+                }
+                type="number"
+                value={String(settings["embedding.chunk_size"] ?? 800)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="embedding.chunk_overlap">Chunk overlap</Label>
+              <Input
+                id="embedding.chunk_overlap"
+                min={0}
+                onChange={(e) =>
+                  updateLocal(
+                    "embedding.chunk_overlap",
+                    Number.parseInt(e.target.value, 10) || 200
+                  )
+                }
+                type="number"
+                value={String(settings["embedding.chunk_overlap"] ?? 200)}
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Retrieval</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Retrieval</h2>
+        <div className="grid gap-4 p-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="retrieval.k">Shots per query (k)</Label>
             <Input
@@ -388,21 +399,6 @@ export function SettingsForm() {
             />
           </div>
           <div>
-            <Label htmlFor="retrieval.timeout_ms">Timeout (ms)</Label>
-            <Input
-              id="retrieval.timeout_ms"
-              min={1000}
-              onChange={(e) =>
-                updateLocal(
-                  "retrieval.timeout_ms",
-                  Number.parseInt(e.target.value, 10) || 12_000
-                )
-              }
-              type="number"
-              value={String(settings["retrieval.timeout_ms"] ?? 12_000)}
-            />
-          </div>
-          <div>
             <Label htmlFor="retrieval.cache_ttl_ms">Cache TTL (ms)</Label>
             <Input
               id="retrieval.cache_ttl_ms"
@@ -416,6 +412,10 @@ export function SettingsForm() {
               type="number"
               value={String(settings["retrieval.cache_ttl_ms"] ?? 300_000)}
             />
+            <p className="mt-1 text-muted-foreground text-xs">
+              How long cached retrieval results and query embeddings stay valid
+              (ms). 0 = no caching.
+            </p>
           </div>
           <div>
             <Label htmlFor="retrieval.cache_max_entries">
@@ -433,50 +433,69 @@ export function SettingsForm() {
               type="number"
               value={String(settings["retrieval.cache_max_entries"] ?? 128)}
             />
+            <p className="mt-1 text-muted-foreground text-xs">
+              Maximum number of cached queries. Oldest entries are evicted when
+              full.
+            </p>
           </div>
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Chat</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Chat</h2>
+        <div className="grid gap-4 p-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="chat.archivo_retrieval_timeout_ms">
-              Archivo retrieval timeout (ms)
-            </Label>
-            <Input
-              id="chat.archivo_retrieval_timeout_ms"
-              min={1000}
-              onChange={(e) =>
+            <Label htmlFor="chat.model">Agente Fílmico model</Label>
+            <Select
+              onValueChange={(value) =>
                 updateLocal(
-                  "chat.archivo_retrieval_timeout_ms",
-                  Number.parseInt(e.target.value, 10) || 12_000
+                  "chat.model",
+                  value === "__custom__" ? "" : value
                 )
               }
-              type="number"
-              value={String(
-                settings["chat.archivo_retrieval_timeout_ms"] ?? 12_000
-              )}
-            />
-          </div>
-          <div>
-            <Label htmlFor="chat.archivo_playlist_timeout_ms">
-              Archivo playlist timeout (ms)
-            </Label>
-            <Input
-              id="chat.archivo_playlist_timeout_ms"
-              min={1000}
-              onChange={(e) =>
-                updateLocal(
-                  "chat.archivo_playlist_timeout_ms",
-                  Number.parseInt(e.target.value, 10) || 28_000
+              value={
+                CHAT_MODEL_IDS.includes(
+                  String(settings["chat.model"] ?? "openai/gpt-5.2")
                 )
+                  ? String(settings["chat.model"] ?? "openai/gpt-5.2")
+                  : "__custom__"
               }
-              type="number"
-              value={String(
-                settings["chat.archivo_playlist_timeout_ms"] ?? 28_000
-              )}
-            />
+            >
+              <SelectTrigger className="w-[280px]" id="chat.model">
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                {CHAT_MODELS.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__custom__">Custom (enter below)</SelectItem>
+              </SelectContent>
+            </Select>
+            {!CHAT_MODEL_IDS.includes(
+              String(settings["chat.model"] ?? "")
+            ) && (
+              <Input
+                className="mt-2 w-[280px] font-mono text-sm"
+                onChange={(e) =>
+                  updateLocal("chat.model", e.target.value.trim())
+                }
+                placeholder="provider/model-id"
+                value={String(settings["chat.model"] ?? "")}
+              />
+            )}
+            <p className="mt-1 text-muted-foreground text-xs">
+              Model used for Archivo playlist generation.
+            </p>
+            <a
+              className="mt-1 inline-block text-muted-foreground text-xs underline hover:text-foreground"
+              href="https://vercel.com/pablos-projects-c370279e/agente-mafi-tv/ai-gateway/models?capabilities=text"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              For more models →
+            </a>
           </div>
           <div>
             <Label htmlFor="chat.step_count">
@@ -498,151 +517,93 @@ export function SettingsForm() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Entitlements</h2>
-        <div className="space-y-6">
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Entitlements</h2>
+        <div className="grid gap-6 p-4 sm:grid-cols-2">
           <div>
             <h3 className="mb-2 font-medium text-sm">Guest</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="entitlements.guest.max_messages_per_day">
-                  Max messages per day
-                </Label>
-                <Input
-                  id="entitlements.guest.max_messages_per_day"
-                  min={0}
-                  onChange={(e) =>
-                    updateLocal(
-                      "entitlements.guest.max_messages_per_day",
-                      Number.parseInt(e.target.value, 10) || 20
-                    )
-                  }
-                  type="number"
-                  value={String(
-                    settings["entitlements.guest.max_messages_per_day"] ?? 20
-                  )}
-                />
-              </div>
-              <div>
-                <Label htmlFor="entitlements.guest.available_chat_model_ids">
-                  Available models (comma-separated)
-                </Label>
-                <Input
-                  id="entitlements.guest.available_chat_model_ids"
-                  onChange={(e) =>
-                    updateArray(
-                      "entitlements.guest.available_chat_model_ids",
-                      e.target.value
-                    )
-                  }
-                  placeholder="chat-model, film-agent"
-                  value={
-                    Array.isArray(
-                      settings["entitlements.guest.available_chat_model_ids"]
-                    )
-                      ? (
-                          settings[
-                            "entitlements.guest.available_chat_model_ids"
-                          ] as string[]
-                        ).join(", ")
-                      : "chat-model, film-agent"
-                  }
-                />
-              </div>
-            </div>
+            <Label htmlFor="entitlements.guest.max_messages_per_day">
+              Max messages per day
+            </Label>
+            <Input
+              id="entitlements.guest.max_messages_per_day"
+              min={0}
+              onChange={(e) =>
+                updateLocal(
+                  "entitlements.guest.max_messages_per_day",
+                  Number.parseInt(e.target.value, 10) || 20
+                )
+              }
+              type="number"
+              value={String(
+                settings["entitlements.guest.max_messages_per_day"] ?? 20
+              )}
+            />
           </div>
           <div>
             <h3 className="mb-2 font-medium text-sm">Regular</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="entitlements.regular.max_messages_per_day">
-                  Max messages per day
-                </Label>
-                <Input
-                  id="entitlements.regular.max_messages_per_day"
-                  min={0}
-                  onChange={(e) =>
-                    updateLocal(
-                      "entitlements.regular.max_messages_per_day",
-                      Number.parseInt(e.target.value, 10) || 100
-                    )
-                  }
-                  type="number"
-                  value={String(
-                    settings["entitlements.regular.max_messages_per_day"] ?? 100
-                  )}
-                />
-              </div>
-              <div>
-                <Label htmlFor="entitlements.regular.available_chat_model_ids">
-                  Available models (comma-separated)
-                </Label>
-                <Input
-                  id="entitlements.regular.available_chat_model_ids"
-                  onChange={(e) =>
-                    updateArray(
-                      "entitlements.regular.available_chat_model_ids",
-                      e.target.value
-                    )
-                  }
-                  placeholder="chat-model, film-agent"
-                  value={
-                    Array.isArray(
-                      settings["entitlements.regular.available_chat_model_ids"]
-                    )
-                      ? (
-                          settings[
-                            "entitlements.regular.available_chat_model_ids"
-                          ] as string[]
-                        ).join(", ")
-                      : "chat-model, film-agent"
-                  }
-                />
-              </div>
-            </div>
+            <Label htmlFor="entitlements.regular.max_messages_per_day">
+              Max messages per day
+            </Label>
+            <Input
+              id="entitlements.regular.max_messages_per_day"
+              min={0}
+              onChange={(e) =>
+                updateLocal(
+                  "entitlements.regular.max_messages_per_day",
+                  Number.parseInt(e.target.value, 10) || 100
+                )
+              }
+              type="number"
+              value={String(
+                settings["entitlements.regular.max_messages_per_day"] ?? 100
+              )}
+            />
           </div>
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 font-medium text-lg">Ingestion</h2>
-        <p className="mb-4 text-muted-foreground text-sm">
-          Throttle settings for when ingestion is triggered. See{" "}
-          <a className="underline" href="/admin/ingest">
-            /admin/ingest
-          </a>{" "}
-          to run ingestion.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex items-center gap-2">
-            <input
-              checked={settings["ingest.throttle_enabled"] !== false}
-              id="ingest.throttle_enabled"
-              onChange={(e) =>
-                updateLocal("ingest.throttle_enabled", e.target.checked)
-              }
-              type="checkbox"
-            />
-            <Label htmlFor="ingest.throttle_enabled">
-              Enable throttling (delay between embedding calls)
-            </Label>
-          </div>
-          <div>
-            <Label htmlFor="ingest.throttle_delay_ms">
-              Throttle delay (ms)
-            </Label>
-            <Input
-              id="ingest.throttle_delay_ms"
-              min={0}
-              onChange={(e) =>
-                updateLocal(
-                  "ingest.throttle_delay_ms",
-                  Number.parseInt(e.target.value, 10) || 10_000
-                )
-              }
-              type="number"
-              value={String(settings["ingest.throttle_delay_ms"] ?? 10_000)}
-            />
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Ingestion</h2>
+        <div className="space-y-4 p-4">
+          <p className="text-muted-foreground text-sm">
+            Throttle settings for when ingestion is triggered. See{" "}
+            <a className="underline" href="/admin/ingest">
+              /admin/ingest
+            </a>{" "}
+            to run ingestion.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-2">
+              <input
+                checked={settings["ingest.throttle_enabled"] !== false}
+                id="ingest.throttle_enabled"
+                onChange={(e) =>
+                  updateLocal("ingest.throttle_enabled", e.target.checked)
+                }
+                type="checkbox"
+              />
+              <Label htmlFor="ingest.throttle_enabled">
+                Enable throttling (delay between embedding calls)
+              </Label>
+            </div>
+            <div>
+              <Label htmlFor="ingest.throttle_delay_ms">
+                Throttle delay (ms)
+              </Label>
+              <Input
+                id="ingest.throttle_delay_ms"
+                min={0}
+                onChange={(e) =>
+                  updateLocal(
+                    "ingest.throttle_delay_ms",
+                    Number.parseInt(e.target.value, 10) || 10_000
+                  )
+                }
+                type="number"
+                value={String(settings["ingest.throttle_delay_ms"] ?? 10_000)}
+              />
+            </div>
           </div>
         </div>
       </section>

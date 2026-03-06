@@ -37,7 +37,7 @@ export async function POST(request: Request) {
             type: "done",
             ok: result.ok,
             output: result.output,
-            filesProcessed: result.filesProcessed,
+            shotsProcessed: result.shotsProcessed,
             embeddingsUpdated: result.embeddingsUpdated,
             pruned: result.pruned,
             error: result.error,
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
             ok: false,
             error: err instanceof Error ? err.message : String(err),
             output: "",
-            filesProcessed: 0,
+            shotsProcessed: 0,
             embeddingsUpdated: 0,
             pruned: 0,
           })

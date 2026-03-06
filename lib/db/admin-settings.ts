@@ -15,16 +15,12 @@ export type AdminSettingKey =
   | "embedding.chunk_overlap"
   | "retrieval.k"
   | "retrieval.max_result_limit"
-  | "retrieval.timeout_ms"
   | "retrieval.cache_ttl_ms"
   | "retrieval.cache_max_entries"
-  | "chat.archivo_retrieval_timeout_ms"
-  | "chat.archivo_playlist_timeout_ms"
+  | "chat.model"
   | "chat.step_count"
   | "entitlements.guest.max_messages_per_day"
-  | "entitlements.guest.available_chat_model_ids"
   | "entitlements.regular.max_messages_per_day"
-  | "entitlements.regular.available_chat_model_ids"
   | "ingest.throttle_enabled"
   | "ingest.throttle_delay_ms";
 
@@ -46,19 +42,12 @@ const DEFAULTS: Record<AdminSettingKey, string | number | boolean | string[]> =
     "embedding.chunk_overlap": 200,
     "retrieval.k": 24,
     "retrieval.max_result_limit": 50,
-    "retrieval.timeout_ms": 12_000,
     "retrieval.cache_ttl_ms": 300_000,
     "retrieval.cache_max_entries": 128,
-    "chat.archivo_retrieval_timeout_ms": 12_000,
-    "chat.archivo_playlist_timeout_ms": 28_000,
+    "chat.model": "openai/gpt-5.2",
     "chat.step_count": 5,
     "entitlements.guest.max_messages_per_day": 20,
-    "entitlements.guest.available_chat_model_ids": ["chat-model", "film-agent"],
     "entitlements.regular.max_messages_per_day": 100,
-    "entitlements.regular.available_chat_model_ids": [
-      "chat-model",
-      "film-agent",
-    ],
     "ingest.throttle_enabled": true,
     "ingest.throttle_delay_ms": 10_000,
   };

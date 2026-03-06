@@ -24,7 +24,7 @@ import {
 } from "@/lib/ai/mafi-retrieval";
 import { type MafiAnswer, mafiAnswerSchema } from "@/lib/ai/mafi-schema";
 import type { ChatModel } from "@/lib/ai/models";
-import { myProvider } from "@/lib/ai/providers";
+import { filmAgentGateway, myProvider } from "@/lib/ai/providers";
 import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
 import {
   isProductionEnvironment,
@@ -105,6 +105,15 @@ type PlaylistDocumentReference = {
   kind: "mafi-playlist";
 };
 
+function deduplicateShotsById(shots: RetrievedShot[]): RetrievedShot[] {
+  const seen = new Set<string>();
+  return shots.filter((shot) => {
+    if (seen.has(shot.id)) return false;
+    seen.add(shot.id);
+    return true;
+  });
+}
+
 function serializeShotsForPrompt(
   question: string,
   shots: RetrievedShot[]
@@ -115,12 +124,16 @@ function serializeShotsForPrompt(
       shotId: shot.id,
       slug: shot.slug,
       title: shot.title,
+      description: shot.description,
       author: shot.author,
       date: shot.date,
       place: shot.place,
       geotag: shot.geotag,
       tags: shot.tags,
-      excerpt: shot.chunkContent,
+      vimeoUrl: shot.vimeoUrl,
+      historicContext: shot.historicContext,
+      aestheticCriticalCommentary: shot.aestheticCriticalCommentary,
+      productionCommentary: shot.productionCommentary,
       similarity: shot.similarity,
     })),
   };
@@ -309,7 +322,7 @@ function buildPlaylistDocumentContent({
       date: shotMatch?.date ?? null,
       place: shotMatch?.place ?? null,
       tags: shotMatch?.tags ?? [],
-      excerpt: shotMatch?.chunkContent ?? null,
+      excerpt: shotMatch?.description ?? null,
       vimeoUrl: shotMatch?.vimeoUrl ?? null,
       vimeoId: vimeoMetadata.videoId ?? null,
       startTimeSeconds: vimeoMetadata.startTimeSeconds ?? null,
@@ -529,22 +542,14 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    const [
-      archivoPrompt,
-      retrievalTimeoutMs,
-      playlistTimeoutMs,
-      retrievalLimit,
-    ] = await Promise.all([
+    const [archivoPrompt, retrievalLimit, chatModelId] = await Promise.all([
       getAgenteFilmicoPrompt(),
-      getAdminSetting("chat.archivo_retrieval_timeout_ms"),
-      getAdminSetting("chat.archivo_playlist_timeout_ms"),
       getAdminSetting("retrieval.k"),
+      getAdminSetting("chat.model"),
     ]);
 
-    const archivoRetrievalTimeoutMs =
-      typeof retrievalTimeoutMs === "number" ? retrievalTimeoutMs : 12_000;
-    const archivoPlaylistTimeoutMs =
-      typeof playlistTimeoutMs === "number" ? playlistTimeoutMs : 28_000;
+    const archivoRetrievalTimeoutMs = 12_000;
+    const archivoPlaylistTimeoutMs = 28_000;
     const archivoRetrievalLimit =
       typeof retrievalLimit === "number" && retrievalLimit >= 1
         ? retrievalLimit
@@ -552,10 +557,10 @@ export async function POST(request: Request) {
 
     let finalMergedUsage: AppUsage | undefined;
 
-    const DEFAULT_ARCHIVO_MODEL_ID: ChatModel["id"] = "film-agent";
-    const allowedArchivoModels = new Set<ChatModel["id"]>([
-      DEFAULT_ARCHIVO_MODEL_ID,
-    ]);
+    const archiveModelId =
+      typeof chatModelId === "string" && chatModelId.trim().length > 0
+        ? chatModelId.trim()
+        : "openai/gpt-5.2";
 
     const handleArchivoRequest = async (
       dataStream: UIMessageStreamWriter<ChatMessage>
@@ -608,15 +613,21 @@ export async function POST(request: Request) {
       try {
         const playlistAbortController = new AbortController();
         const playlistAbortSignal = playlistAbortController.signal;
+        const dedupedShots = deduplicateShotsById(retrievedShots);
         const retrievalContext = serializeShotsForPrompt(
           questionText,
-          retrievedShots
+          dedupedShots
         );
 
-        const archivoModelId = allowedArchivoModels.has(selectedChatModel)
-          ? selectedChatModel
-          : DEFAULT_ARCHIVO_MODEL_ID;
-        const archiveModel = myProvider.languageModel(archivoModelId);
+        const archiveModel =
+          filmAgentGateway.languageModel(archiveModelId);
+        if (process.env.NODE_ENV !== "test") {
+          console.info("[chat] Archivo gateway request", {
+            model: archiveModelId,
+            chatId: id,
+            streamId,
+          });
+        }
         const objectResult = streamObject({
           model: archiveModel,
           system: archivoPrompt,
@@ -690,7 +701,7 @@ export async function POST(request: Request) {
         const documentContent = buildPlaylistDocumentContent({
           question: questionText,
           answer,
-          shots: retrievedShots,
+          shots: dedupedShots,
         });
 
         await saveDocument({
@@ -752,8 +763,7 @@ export async function POST(request: Request) {
     };
 
     const stream = createUIMessageStream({
-      execute: ({ writer: dataStream }) =>
-        handleArchivoRequest(dataStream),
+      execute: ({ writer: dataStream }) => handleArchivoRequest(dataStream),
       generateId: generateUUID,
       onFinish: async ({ messages }) => {
         await saveMessages({
