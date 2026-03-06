@@ -247,16 +247,23 @@ export async function runMafiIngest(
         .where(eq(shots.slug, slug))
         .limit(1);
 
-      const [upserted] = await db
-        .insert(shots)
-        .values({ ...fields })
-        .onConflictDoUpdate({ target: shots.slug, set: fields })
-        .returning({ id: shots.id });
+      const contentChanged =
+        existing.length === 0 || existing[0].checksum !== checksum;
+
+      const [upserted] = contentChanged
+        ? await db
+            .insert(shots)
+            .values({ ...fields })
+            .onConflictDoUpdate({ target: shots.slug, set: fields })
+            .returning({ id: shots.id })
+        : [{ id: existing[0].id }];
 
       let shouldUpdateEmbeddings =
         existing.length === 0 || existing[0].checksum !== checksum;
       let updateReason: "new" | "hash diff" | "timestamp check" | "no embeddings" =
         existing.length === 0 ? "new" : "hash diff";
+      let debugShotUpdatedAt: Date | null = null;
+      let debugEmbeddingCreatedAt: Date | null = null;
 
       if (!shouldUpdateEmbeddings && embeddingTable) {
         const existingForModel = await db
@@ -282,6 +289,10 @@ export async function runMafiIngest(
           if (shotUpdatedAt > embeddingCreatedAt) {
             shouldUpdateEmbeddings = true;
             updateReason = "timestamp check";
+            debugShotUpdatedAt = existing[0].updatedAt;
+            debugEmbeddingCreatedAt = (
+              existingForModel[0] as { createdAt: Date }
+            ).createdAt;
           }
         }
       }
@@ -289,6 +300,30 @@ export async function runMafiIngest(
       if (!shouldUpdateEmbeddings) {
         log(onLog, lines, "⚪️ Shot", slug, "is up to date");
         continue;
+      }
+
+      if (updateReason === "hash diff") {
+        log(
+          onLog,
+          lines,
+          "   → reason: checksum changed",
+          existing[0].checksum,
+          "→",
+          checksum
+        );
+      } else if (updateReason === "timestamp check" && debugShotUpdatedAt && debugEmbeddingCreatedAt) {
+        log(
+          onLog,
+          lines,
+          "   → reason: shot.updated_at > embedding.created_at",
+          debugShotUpdatedAt.toISOString(),
+          ">",
+          debugEmbeddingCreatedAt.toISOString()
+        );
+      } else if (updateReason === "no embeddings") {
+        log(onLog, lines, "   → reason: no embeddings for model", embeddingModel);
+      } else {
+        log(onLog, lines, "   → reason: new shot");
       }
 
       const textToEmbed = [
