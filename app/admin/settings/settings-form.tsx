@@ -288,7 +288,7 @@ export function SettingsForm() {
         <div className="space-y-4 p-4">
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <Label htmlFor="embedding.model">Retrieval model</Label>
+              <Label htmlFor="embedding.model">Embedding model</Label>
               <Select
                 onValueChange={(value) => updateLocal("embedding.model", value)}
                 value={String(
