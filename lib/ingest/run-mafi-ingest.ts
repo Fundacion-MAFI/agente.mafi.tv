@@ -168,7 +168,7 @@ export async function runMafiIngest(
     const embeddingTable =
       SHOT_EMBEDDING_TABLES[dimensions as keyof typeof SHOT_EMBEDDING_TABLES];
 
-    log(onLog, lines, "📼 Ingesting MAFI shots from database");
+    log(onLog, lines, "📼 Embedding MAFI shots from database");
     log(onLog, lines, "   Embedding model:", embeddingModel);
 
     if (throttle) {
@@ -344,7 +344,7 @@ export async function runMafiIngest(
     };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    log(onLog, lines, "❌ Failed to ingest MAFI shots");
+    log(onLog, lines, "❌ Failed to embed MAFI shots");
     log(onLog, lines, errMsg);
     await sqlClient.end();
     return {

@@ -101,12 +101,12 @@ export function AdminIngestProvider({ children }: { children: ReactNode }) {
             setOutput((prev) => (prev ?? "") + data.line + "\n");
           } else if (data.type === "done") {
             if (data.ok) {
-              toast({ type: "success", description: "Ingestion completed" });
+              toast({ type: "success", description: "Embedding completed" });
               await onCompleteRef.current?.();
             } else {
               toast({
                 type: "error",
-                description: (data.error as string) ?? "Ingestion failed",
+                description: (data.error as string) ?? "Embedding failed",
               });
             }
           }
@@ -126,7 +126,7 @@ export function AdminIngestProvider({ children }: { children: ReactNode }) {
           } else if (data.type === "done" && !data.ok) {
             toast({
               type: "error",
-              description: (data.error as string) ?? "Ingestion failed",
+              description: (data.error as string) ?? "Embedding failed",
             });
           }
         } catch {

@@ -24,7 +24,7 @@ import { useAdminIngest } from "./admin-ingest-context";
 
 const NAV_LINKS = [
   { href: "/admin/shots", label: "Shots" },
-  { href: "/admin/ingest", label: "Ingest" },
+  { href: "/admin/ingest", label: "Embed" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/", label: "← Back to app" },
 ] as const;
@@ -112,7 +112,7 @@ export function AdminNav() {
                     aria-hidden
                     className="size-1.5 animate-pulse rounded-full bg-amber-500"
                   />
-                  Ingesting
+                  Embedding
                   {progress ? ` ${progress.current}/${progress.total}` : "…"}
                 </Link>
               </TooltipTrigger>
@@ -122,7 +122,7 @@ export function AdminNav() {
                     {lastLogLine}
                   </p>
                 ) : (
-                  <p className="text-xs">View progress on Ingest page</p>
+                  <p className="text-xs">View progress on Embed page</p>
                 )}
               </TooltipContent>
             </Tooltip>

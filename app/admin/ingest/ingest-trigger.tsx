@@ -219,7 +219,7 @@ export function IngestTrigger() {
             <AlertDialogTitle>Purge embeddings?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete all embeddings for this model. You
-              will need to run ingestion again to recreate them.
+              will need to run embedding again to recreate them.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -240,11 +240,11 @@ export function IngestTrigger() {
 
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          Ingestion uses the model selected in{" "}
+          Embedding uses the model selected in{" "}
           <a className="underline" href="/admin/settings">
             Settings
           </a>
-          . Run ingestion to populate embeddings for that model.
+          . Run embedding to populate embeddings for that model.
         </p>
         <Button
           disabled={running}
@@ -253,14 +253,14 @@ export function IngestTrigger() {
           }}
           type="button"
         >
-          {running ? "Running…" : "Run ingestion"}
+          {running ? "Running…" : "Run embedding"}
         </Button>
       </div>
 
       <AlertDialog onOpenChange={setConfirmOpen} open={confirmOpen}>
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Run ingestion?</AlertDialogTitle>
+            <AlertDialogTitle>Run embedding?</AlertDialogTitle>
             <AlertDialogDescription>
               This may take several minutes and will update embeddings for the
               selected model (see Settings).
@@ -276,7 +276,7 @@ export function IngestTrigger() {
               }}
               type="button"
             >
-              Run ingestion
+              Run embedding
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

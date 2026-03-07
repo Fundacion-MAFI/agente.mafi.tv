@@ -564,14 +564,14 @@ export function SettingsForm() {
       </section>
 
       <section className="overflow-hidden rounded-lg border">
-        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Ingestion</h2>
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">Embedding</h2>
         <div className="space-y-4 p-4">
           <p className="text-muted-foreground text-sm">
-            Throttle settings for when ingestion is triggered. See{" "}
+            Throttle settings for embedding runs. See the{" "}
             <a className="underline" href="/admin/ingest">
-              /admin/ingest
+              Embed page
             </a>{" "}
-            to run ingestion.
+            to run embedding.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex items-center gap-2">

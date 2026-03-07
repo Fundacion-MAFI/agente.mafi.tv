@@ -4,10 +4,10 @@ export default function AdminIngestPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-semibold text-2xl">Ingestion</h1>
+        <h1 className="font-semibold text-2xl">Embed</h1>
         <p className="mt-1 text-muted-foreground text-sm">
-          Trigger MAFI shots embedding refresh from the database. Ingestion uses
-          the retrieval model selected in{" "}
+          Refresh MAFI shot embeddings from the database. Embedding uses the
+          retrieval model selected in{" "}
           <a className="underline" href="/admin/settings">
             Settings
           </a>

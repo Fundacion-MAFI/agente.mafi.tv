@@ -13,11 +13,11 @@ runMafiIngest({
 })
   .then((result) => {
     if (!result.ok) {
-      console.error("❌ Ingest failed:", result.error);
+      console.error("❌ Embedding failed:", result.error);
       process.exit(1);
     }
   })
   .catch((err) => {
-    console.error("❌ Ingest failed:", err);
+    console.error("❌ Embedding failed:", err);
     process.exit(1);
   });
