@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   experimental: {},
 
   images: {
+    dangerouslyAllowSVG: true,
     remotePatterns: [
       {
         hostname: "avatar.vercel.sh",

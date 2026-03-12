@@ -2,8 +2,10 @@
 
 import { ChevronDownIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { MafiLogo } from "@/components/mafi-logo";
 import {
   Collapsible,
   CollapsibleContent,
@@ -298,13 +300,8 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="border-b">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <Link className="flex items-center gap-2" href="/">
-            <div
-              aria-hidden
-              className="flex h-10 w-32 items-center justify-center rounded border border-border bg-muted font-medium text-muted-foreground text-sm"
-            >
-              Logo
-            </div>
+          <Link className="flex items-center gap-2 text-foreground" href="/">
+            <MafiLogo className="shrink-0" />
           </Link>
           <nav className="flex items-center gap-4">
             <Button
@@ -363,14 +360,26 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
           )}
         </section>
 
-        {/* Hero image placeholder */}
-        <section className="mx-auto mt-16 max-w-3xl">
-          <div
-            aria-hidden
-            className="flex aspect-video w-full items-center justify-center rounded-lg border border-border bg-muted font-medium text-muted-foreground"
-          >
-            Imagen destacada
-          </div>
+        {/* Cover image */}
+        <section className="relative mx-auto mt-16 aspect-video w-full max-w-3xl overflow-hidden rounded-lg">
+          <Image
+            alt="MAFI.tv archive"
+            className="dark:hidden"
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 48rem"
+            src="/logo/svg/MAFI.tv%20grandis%20Black%20BG.svg"
+            unoptimized
+          />
+          <Image
+            alt="MAFI.tv archive"
+            className="hidden dark:block"
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 48rem"
+            src="/logo/svg/MAFI.tv%20fern%20Black%20BG.svg"
+            unoptimized
+          />
         </section>
 
         {/* Intro */}
@@ -466,9 +475,9 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
             ))}
           </ul>
           {content.contactLine && (
-            <p className="mt-4 text-muted-foreground text-sm">
+            <div className="mt-4 text-muted-foreground text-sm">
               {renderFormattedText(content.contactLine)}
-            </p>
+            </div>
           )}
         </section>
 
