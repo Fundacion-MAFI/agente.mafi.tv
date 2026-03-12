@@ -397,27 +397,17 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
         {/* Cover image */}
         <section className="relative mx-auto mt-16 aspect-video w-full max-w-3xl overflow-hidden rounded-lg">
           <Image
-            alt="MAFI.tv archive"
-            className="dark:hidden"
+            alt="MAFI.tv - mapa fílmico de un país"
             fill
             priority
             sizes="(max-width: 768px) 100vw, 48rem"
-            src="/logo/svg/MAFI.tv%20grandis%20Black%20BG.svg"
-            unoptimized
-          />
-          <Image
-            alt="MAFI.tv archive"
-            className="hidden dark:block"
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw, 48rem"
-            src="/logo/svg/MAFI.tv%20fern%20Black%20BG.svg"
+            src="/logo/MAFI_tv.GIF"
             unoptimized
           />
         </section>
 
         {/* Intro */}
-        <section className="mx-auto mt-20 max-w-3xl text-center">
+        <section className="mx-auto mt-20 max-w-3xl text-left">
           {content.introHeading && (
             <h2 className="mb-4 font-semibold text-xl md:text-2xl">
               {content.introHeading}
@@ -516,7 +506,7 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
         </section>
 
         {/* Credits */}
-        <footer className="mx-auto mt-20 max-w-3xl border-t pt-8">
+        <footer className="mx-auto mt-20 w-full max-w-3xl border-t pt-8 text-left">
           <h3 className="mb-4 font-medium text-sm">{content.creditsTitle}</h3>
           <div className="text-muted-foreground text-sm">
             {renderFormattedText(content.credits, { splitOnSingleNewline: true })}
