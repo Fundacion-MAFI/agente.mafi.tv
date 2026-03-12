@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, MoonIcon, SunIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { MafiLogo } from "@/components/mafi-logo";
 import {
@@ -289,10 +290,20 @@ type LandingPageProps = {
 export function LandingPage({ isAuthenticated }: LandingPageProps) {
   const [lang, setLang] = useState<Lang>("es");
   const [openFaq, setOpenFaq] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const { setTheme, resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleLang = useCallback(() => {
     setLang((prev) => (prev === "es" ? "en" : "es"));
   }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }, [resolvedTheme, setTheme]);
 
   const content = CONTENT[lang];
 
@@ -304,6 +315,29 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
             <MafiLogo className="shrink-0" />
           </Link>
           <nav className="flex items-center gap-4">
+            {mounted && (
+              <Button
+                onClick={toggleTheme}
+                size="sm"
+                type="button"
+                variant="outline"
+                aria-label={
+                  resolvedTheme === "dark"
+                    ? lang === "es"
+                      ? "Cambiar a modo claro"
+                      : "Switch to light mode"
+                    : lang === "es"
+                      ? "Cambiar a modo oscuro"
+                      : "Switch to dark mode"
+                }
+              >
+                {resolvedTheme === "dark" ? (
+                  <SunIcon className="size-4" />
+                ) : (
+                  <MoonIcon className="size-4" />
+                )}
+              </Button>
+            )}
             <Button
               onClick={toggleLang}
               size="sm"
