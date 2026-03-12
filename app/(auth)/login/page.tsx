@@ -41,7 +41,7 @@ export default function Page() {
       successHandled.current = true;
       setIsSuccessful(true);
       updateSession().then(() => {
-        router.push("/");
+        router.push("/chat");
       });
     }
   }, [state.status, router, updateSession]);

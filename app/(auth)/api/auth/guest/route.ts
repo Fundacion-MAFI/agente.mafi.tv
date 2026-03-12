@@ -14,7 +14,12 @@ export async function GET(request: Request) {
   });
 
   if (token) {
-    return NextResponse.redirect(new URL("/", request.url));
+    try {
+      const target = new URL(redirectUrl, request.url);
+      return NextResponse.redirect(target);
+    } catch {
+      return NextResponse.redirect(new URL("/chat", request.url));
+    }
   }
 
   return signIn("guest", { redirect: true, redirectTo: redirectUrl });

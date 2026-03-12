@@ -40,7 +40,7 @@ export default function Page() {
       setIsSuccessful(true);
       toast({ type: "success", description: "¡Cuenta creada con éxito!" });
       updateSession().then(() => {
-        router.push("/");
+        router.push("/chat");
       });
     }
   }, [state.status, router, updateSession]);

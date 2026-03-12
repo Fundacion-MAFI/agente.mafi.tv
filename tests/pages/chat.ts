@@ -33,7 +33,7 @@ export class ChatPage {
   }
 
   async createNewChat() {
-    await this.page.goto("/");
+    await this.page.goto("/chat");
   }
 
   getCurrentURL(): string {

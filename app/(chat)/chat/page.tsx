@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 import { generateUUID } from "@/lib/utils";
-import { auth } from "../(auth)/auth";
+import { auth } from "@/app/(auth)/auth";
 
-export default async function Page() {
+export default async function ChatPage() {
   const session = await auth();
 
   if (!session) {
-    redirect("/api/auth/guest");
+    redirect("/api/auth/guest?redirectUrl=/chat");
   }
 
   const id = generateUUID();
