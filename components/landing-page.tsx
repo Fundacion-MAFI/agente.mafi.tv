@@ -117,7 +117,7 @@ const CONTENT: Record<Lang, LangContent> = {
       "Contacto: Para preguntas, comentarios o actualizaciones sobre este proyecto, contacta a Pablo Núñez a través de su [sitio web](https://thirdeyefiles.net/about/#Contact) o [LinkedIn](https://www.linkedin.com/in/pnunezpalma/).",
     creditsTitle: "Créditos",
     credits:
-      "Pablo Núñez y Antonio Luco: líderes e investigadores del proyecto\nIgnacio Rojas y David Vandenbogaerde: Investigación y Desarrollo\nFilms producidos por el Colectivo MAFI\n\n© 2026 Colectivo MAFI. Todos los derechos reservados\nSoftware: Código abierto bajo licencia MIT\nCon el apoyo de [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl/en/info)\nEn colaboración con Netherlands Film Academy, [programa AI Greenhouse](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/)",
+      "Pablo Núñez y Antonio Luco: líderes e investigadores del proyecto\nIgnacio Rojas y [David Vandenbogaerde](https://d17e.dev): Investigación y Desarrollo\nFilms producidos por el Colectivo MAFI\n\n© 2026 Colectivo MAFI. Todos los derechos reservados\nSoftware: Código abierto bajo licencia MIT\nCon el apoyo de [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl/en/info)\nEn colaboración con Netherlands Film Academy, [programa AI Greenhouse](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/)",
     copyright: "Colectivo MAFI",
   },
   en: {
@@ -187,7 +187,7 @@ const CONTENT: Record<Lang, LangContent> = {
       "Contact: For questions, comments, or updates about this project, contact Pablo Núñez via his [website](https://thirdeyefiles.net/about/#Contact) or [LinkedIn](https://www.linkedin.com/in/pnunezpalma/).",
     creditsTitle: "Credits",
     credits:
-      "Pablo Núñez and Antonio Luco: project leads and investigators\nIgnacio Rojas and David Vandenbogaerde: Research and Development\nFilms produced by the MAFI Collective\n\n© 2026 MAFI Collective. All rights reserved\nSoftware: Open source under MIT License\nSupported by [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl/en/info)\nIn collaboration with Netherlands Film Academy, [AI Greenhouse programme](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/)",
+      "Pablo Núñez and Antonio Luco: project leads and investigators\nIgnacio Rojas and [David Vandenbogaerde](https://d17e.dev): Research and Development\nFilms produced by the MAFI Collective\n\n© 2026 MAFI Collective. All rights reserved\nSoftware: Open source under MIT License\nSupported by [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl/en/info)\nIn collaboration with Netherlands Film Academy, [AI Greenhouse programme](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/)",
     copyright: "MAFI Collective",
   },
 };
