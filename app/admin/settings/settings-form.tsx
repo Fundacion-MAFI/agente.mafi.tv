@@ -193,9 +193,17 @@ export function SettingsForm() {
     };
   }, [registerSaveHandler, unregisterSaveHandler, clearDirty]);
 
-  const updateLocal = (key: string, value: string | number | boolean) => {
+  const updateLocal = (
+    key: string,
+    value: string | number | boolean | string[]
+  ) => {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : null));
   };
+
+  const getSuggestedActionsItems = (): string[] =>
+    settings && Array.isArray(settings["suggested_actions.items"])
+      ? (settings["suggested_actions.items"] as string[])
+      : [];
 
   async function handleSave() {
     if (!settings) return;
@@ -603,6 +611,135 @@ export function SettingsForm() {
                 type="number"
                 value={String(settings["ingest.throttle_delay_ms"] ?? 10_000)}
               />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-lg border">
+        <h2 className="bg-muted px-4 py-3 font-medium text-lg">
+          Greeting & suggested actions
+        </h2>
+        <div className="space-y-6 p-4">
+          <div className="space-y-4">
+            <h3 className="font-medium text-sm">Greeting</h3>
+            <div className="grid gap-4">
+              <div>
+                <Label htmlFor="greeting.title">Title</Label>
+                <Input
+                  className="mt-1"
+                  id="greeting.title"
+                  onChange={(e) =>
+                    updateLocal("greeting.title", e.target.value)
+                  }
+                  placeholder="Hola, soy el Agente Fílmico del archivo MAFI."
+                  value={String(settings["greeting.title"] ?? "")}
+                />
+              </div>
+              <div>
+                <Label htmlFor="greeting.subtitle">Subtitle</Label>
+                <textarea
+                  className="mt-1 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  id="greeting.subtitle"
+                  onChange={(e) =>
+                    updateLocal("greeting.subtitle", e.target.value)
+                  }
+                  placeholder="Pregúntame lo que quieras..."
+                  value={String(settings["greeting.subtitle"] ?? "")}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <h3 className="font-medium text-sm">Suggested actions</h3>
+            <p className="text-muted-foreground text-xs">
+              Clickable prompts shown when the chat is empty. Add as many as you
+              want; use the visibility counts below to limit how many appear on
+              mobile vs web.
+            </p>
+            <div className="flex flex-col gap-2">
+              {getSuggestedActionsItems().map((item, index) => (
+                <div className="flex gap-2" key={`suggestion-${index}`}>
+                  <Input
+                    className="flex-1"
+                    onChange={(e) => {
+                      const items = [...getSuggestedActionsItems()];
+                      items[index] = e.target.value;
+                      updateLocal("suggested_actions.items", items);
+                    }}
+                    value={item}
+                  />
+                  <Button
+                    onClick={() => {
+                      const items = [...getSuggestedActionsItems()];
+                      items.splice(index, 1);
+                      updateLocal("suggested_actions.items", items);
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <Button
+                onClick={() => {
+                  const items = [...getSuggestedActionsItems(), ""];
+                  updateLocal("suggested_actions.items", items);
+                }}
+                size="sm"
+                type="button"
+                variant="secondary"
+              >
+                Add action
+              </Button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="suggested_actions.visible_count_mobile">
+                  Visible on mobile
+                </Label>
+                <Input
+                  id="suggested_actions.visible_count_mobile"
+                  min={0}
+                  onChange={(e) =>
+                    updateLocal(
+                      "suggested_actions.visible_count_mobile",
+                      Number.parseInt(e.target.value, 10) || 0
+                    )
+                  }
+                  type="number"
+                  value={String(
+                    settings["suggested_actions.visible_count_mobile"] ?? 4
+                  )}
+                />
+                <p className="mt-1 text-muted-foreground text-xs">
+                  Max actions shown on screens &lt;768px
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="suggested_actions.visible_count_web">
+                  Visible on web
+                </Label>
+                <Input
+                  id="suggested_actions.visible_count_web"
+                  min={0}
+                  onChange={(e) =>
+                    updateLocal(
+                      "suggested_actions.visible_count_web",
+                      Number.parseInt(e.target.value, 10) || 0
+                    )
+                  }
+                  type="number"
+                  value={String(
+                    settings["suggested_actions.visible_count_web"] ?? 6
+                  )}
+                />
+                <p className="mt-1 text-muted-foreground text-xs">
+                  Max actions shown on screens ≥768px
+                </p>
+              </div>
             </div>
           </div>
         </div>
