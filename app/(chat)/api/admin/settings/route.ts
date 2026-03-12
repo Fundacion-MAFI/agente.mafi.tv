@@ -88,6 +88,11 @@ const ALLOWED_KEYS: AdminSettingKey[] = [
   "entitlements.regular.max_messages_per_day",
   "ingest.throttle_enabled",
   "ingest.throttle_delay_ms",
+  "greeting.title",
+  "greeting.subtitle",
+  "suggested_actions.items",
+  "suggested_actions.visible_count_mobile",
+  "suggested_actions.visible_count_web",
 ];
 
 function parseValue(
@@ -98,6 +103,23 @@ function parseValue(
 
   if (key.startsWith("prompts.")) {
     return typeof raw === "string" ? raw : String(raw);
+  }
+
+  if (key === "greeting.title" || key === "greeting.subtitle") {
+    return typeof raw === "string" ? raw : String(raw ?? "");
+  }
+
+  if (key === "suggested_actions.items") {
+    if (!Array.isArray(raw)) return undefined;
+    return raw.filter((v): v is string => typeof v === "string");
+  }
+
+  if (
+    key === "suggested_actions.visible_count_mobile" ||
+    key === "suggested_actions.visible_count_web"
+  ) {
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
   }
 
   if (key === "embedding.model") {

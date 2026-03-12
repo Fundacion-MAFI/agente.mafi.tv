@@ -18,12 +18,14 @@ export default async function AdminLayout({
     <AdminDirtyProvider>
       <AdminIngestProvider>
         <div className="min-h-screen bg-background">
-          <header className="border-b">
+          <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
             <div className="container mx-auto flex h-14 items-center gap-6 px-4">
               <AdminNav />
             </div>
           </header>
-          <main className="container mx-auto px-4 py-8">{children}</main>
+          <main className="container mx-auto px-4 pt-[calc(3.5rem_+_2rem)] pb-8">
+            {children}
+          </main>
         </div>
       </AdminIngestProvider>
     </AdminDirtyProvider>

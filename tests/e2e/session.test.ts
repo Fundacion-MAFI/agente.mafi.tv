@@ -9,7 +9,7 @@ test.describe
     test("Authenticate as guest user when a new session is loaded", async ({
       page,
     }) => {
-      const response = await page.goto("/");
+      const response = await page.goto("/chat");
 
       if (!response) {
         throw new Error("Failed to load page");
@@ -25,14 +25,14 @@ test.describe
       }
 
       expect(chain).toEqual([
-        "http://localhost:3000/",
-        "http://localhost:3000/api/auth/guest?redirectUrl=http%3A%2F%2Flocalhost%3A3000%2F",
-        "http://localhost:3000/",
+        "http://localhost:3000/chat",
+        "http://localhost:3000/api/auth/guest?redirectUrl=http%3A%2F%2Flocalhost%3A3000%2Fchat",
+        "http://localhost:3000/chat",
       ]);
     });
 
     test("Log out is not available for guest users", async ({ page }) => {
-      await page.goto("/");
+      await page.goto("/chat");
 
       const sidebarToggleButton = page.getByTestId("sidebar-toggle-button");
       await sidebarToggleButton.click();
@@ -51,7 +51,7 @@ test.describe
     test("Do not authenticate as guest user when an existing non-guest session is active", async ({
       adaContext,
     }) => {
-      const response = await adaContext.page.goto("/");
+      const response = await adaContext.page.goto("/chat");
 
       if (!response) {
         throw new Error("Failed to load page");
@@ -66,7 +66,7 @@ test.describe
         request = request.redirectedFrom();
       }
 
-      expect(chain).toEqual(["http://localhost:3000/"]);
+      expect(chain).toEqual(["http://localhost:3000/chat"]);
     });
 
     test("Allow navigating to /login as guest user", async ({ page }) => {
@@ -82,7 +82,7 @@ test.describe
     });
 
     test("Do not show email in user menu for guest user", async ({ page }) => {
-      await page.goto("/");
+      await page.goto("/chat");
 
       const sidebarToggleButton = page.getByTestId("sidebar-toggle-button");
       await sidebarToggleButton.click();
@@ -115,15 +115,15 @@ test.describe
     test("Log into account that exists", async ({ page }) => {
       await authPage.login(testUser.email, testUser.password);
 
-      await page.waitForURL("/");
-      await expect(page.getByPlaceholder("Send a message...")).toBeVisible();
+      await page.waitForURL(/\/chat/);
+      await expect(page.getByTestId("multimodal-input")).toBeVisible();
     });
 
     test("Display user email in user menu", async ({ page }) => {
       await authPage.login(testUser.email, testUser.password);
 
-      await page.waitForURL("/");
-      await expect(page.getByPlaceholder("Send a message...")).toBeVisible();
+      await page.waitForURL(/\/chat/);
+      await expect(page.getByTestId("multimodal-input")).toBeVisible();
 
       const userEmail = await page.getByTestId("user-email");
       await expect(userEmail).toHaveText(testUser.email);
@@ -137,13 +137,13 @@ test.describe
       page,
     }) => {
       await authPage.login(testUser.email, testUser.password);
-      await page.waitForURL("/");
+      await page.waitForURL(/\/chat/);
 
       const userEmail = await page.getByTestId("user-email");
       await expect(userEmail).toHaveText(testUser.email);
 
       await page.goto("/api/auth/guest");
-      await page.waitForURL("/");
+      await page.waitForURL(/\/chat/);
 
       const updatedUserEmail = await page.getByTestId("user-email");
       await expect(updatedUserEmail).toHaveText(testUser.email);
@@ -151,7 +151,7 @@ test.describe
 
     test("Log out is available for non-guest users", async ({ page }) => {
       await authPage.login(testUser.email, testUser.password);
-      await page.waitForURL("/");
+      await page.waitForURL(/\/chat/);
 
       authPage.openSidebar();
 
@@ -170,18 +170,18 @@ test.describe
       page,
     }) => {
       await authPage.login(testUser.email, testUser.password);
-      await page.waitForURL("/");
+      await page.waitForURL(/\/chat/);
 
       await page.goto("/register");
-      await expect(page).toHaveURL("/");
+      await expect(page).toHaveURL(/\/chat/);
     });
 
     test("Do not navigate to /login for non-guest users", async ({ page }) => {
       await authPage.login(testUser.email, testUser.password);
-      await page.waitForURL("/");
+      await page.waitForURL(/\/chat/);
 
       await page.goto("/login");
-      await expect(page).toHaveURL("/");
+      await expect(page).toHaveURL(/\/chat/);
     });
   });
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
@@ -8,6 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { MafiLogo } from "@/components/mafi-logo";
 import { PlusIcon } from "@/components/icons";
 import {
   getChatHistoryPaginationKey,
@@ -50,7 +50,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       loading: "Deleting all chats...",
       success: () => {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
-        router.push("/");
+        router.push("/chat");
         setShowDeleteAllDialog(false);
         return "All chats deleted successfully";
       },
@@ -65,21 +65,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <SidebarMenu>
             <div className="relative flex flex-row items-center justify-center">
               <Link
-                className="flex flex-row items-center gap-3"
-                href="/"
+                className="flex flex-row items-center gap-3 text-sidebar-foreground"
+                href="/chat"
                 onClick={() => {
                   setOpenMobile(false);
                 }}
               >
-                <Image
-                  alt="Agente MAFI"
-                  className="cursor-pointer object-contain hover:opacity-90"
-                  height={48}
-                  priority
-                  src="/images/agente-mafi-logo.png"
-                  unoptimized
-                  width={160}
-                />
+                <MafiLogo className="h-8 w-24 shrink-0 cursor-pointer hover:opacity-90" />
               </Link>
               <div className="-translate-y-1/2 absolute top-1/2 right-0 flex flex-row gap-1">
                 <Tooltip>
@@ -88,7 +80,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       className="h-8 p-1 md:h-fit md:p-2"
                       onClick={() => {
                         setOpenMobile(false);
-                        router.push("/");
+                        router.push("/chat");
                         router.refresh();
                       }}
                       type="button"

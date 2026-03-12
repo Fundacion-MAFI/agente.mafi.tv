@@ -22,11 +22,25 @@ export type AdminSettingKey =
   | "entitlements.guest.max_messages_per_day"
   | "entitlements.regular.max_messages_per_day"
   | "ingest.throttle_enabled"
-  | "ingest.throttle_delay_ms";
+  | "ingest.throttle_delay_ms"
+  | "greeting.title"
+  | "greeting.subtitle"
+  | "suggested_actions.items"
+  | "suggested_actions.visible_count_mobile"
+  | "suggested_actions.visible_count_web";
 
 export type AdminSettingsMap = Partial<
   Record<AdminSettingKey, string | number | boolean | string[]>
 >;
+
+const DEFAULT_SUGGESTED_ACTIONS = [
+  "Muéstrame planos sobre protestas.",
+  "Planos grabados cerca de mi ubicación.",
+  "Muéstrame que retraten el mar.",
+  "Quiero ver sobre el trabajo",
+  "Muéstrame sobre la identidad nacional.",
+  "¿Qué planos grabó Antonio Luco?",
+];
 
 const DEFAULTS: Record<AdminSettingKey, string | number | boolean | string[]> =
   {
@@ -50,6 +64,12 @@ const DEFAULTS: Record<AdminSettingKey, string | number | boolean | string[]> =
     "entitlements.regular.max_messages_per_day": 100,
     "ingest.throttle_enabled": true,
     "ingest.throttle_delay_ms": 10_000,
+    "greeting.title": "Hola, soy el Agente Fílmico del archivo MAFI.",
+    "greeting.subtitle":
+      "Pregúntame lo que quieras. Te compartiré planos, historias y enlaces para que juntos armemos tu propio recorrido por el archivo.",
+    "suggested_actions.items": DEFAULT_SUGGESTED_ACTIONS,
+    "suggested_actions.visible_count_mobile": 4,
+    "suggested_actions.visible_count_web": 6,
   };
 
 export async function getAdminSetting<K extends AdminSettingKey>(

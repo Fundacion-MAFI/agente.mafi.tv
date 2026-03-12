@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import {
   AlertDialog,
@@ -29,8 +29,16 @@ const NAV_LINKS = [
   { href: "/", label: "← Back to app" },
 ] as const;
 
+function isNavActive(href: string, pathname: string) {
+  if (href === "/") return false;
+  if (href === "/admin")
+    return pathname === "/admin" || pathname === "/admin/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AdminNav() {
   const router = useRouter();
+  const pathname = usePathname();
   const dirty = useAdminDirty();
   const ingest = useAdminIngest();
   const [saving, setSaving] = useState(false);
@@ -83,22 +91,25 @@ export function AdminNav() {
     <>
       <nav className="flex flex-1 items-center gap-4">
         <Link
-          className="font-semibold text-foreground hover:underline"
+          className={`font-semibold hover:underline ${isNavActive("/admin", pathname ?? "") ? "text-foreground underline underline-offset-4" : "text-muted-foreground"}`}
           href="/admin"
           onClick={(e) => handleLinkClick(e, "/admin")}
         >
           Admin
         </Link>
-        {NAV_LINKS.map(({ href, label }) => (
-          <Link
-            className="text-muted-foreground text-sm hover:text-foreground"
-            href={href}
-            key={href}
-            onClick={(e) => handleLinkClick(e, href)}
-          >
-            {label}
-          </Link>
-        ))}
+        {NAV_LINKS.map(({ href, label }) => {
+          const active = isNavActive(href, pathname ?? "");
+          return (
+            <Link
+              className={`text-sm hover:text-foreground ${active ? "font-medium text-foreground underline underline-offset-4" : "text-muted-foreground"}`}
+              href={href}
+              key={href}
+              onClick={(e) => handleLinkClick(e, href)}
+            >
+              {label}
+            </Link>
+          );
+        })}
         {ingest?.running && (
           <TooltipProvider>
             <Tooltip>
