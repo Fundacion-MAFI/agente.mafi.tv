@@ -8,7 +8,7 @@ A prompt-based interface for exploring audiovisual archives. Ask questions in na
 
 **Agente Fílmico** is a digital tool that lets users *converse* with a film archive. Instead of browsing catalogs or filtering by metadata, visitors ask questions in plain language. An AI curatorial agent retrieves relevant shots, interprets the collection, and responds with commentary and playlists.
 
-This prototype showcases the **MAFI (Mapa Fílmico de un País)** collection—short documentaries by the Chilean Film Collective MAFI. Working with 50 annotated films, we're testing how conversational interaction can open new ways to access archival materials.
+This prototype showcases the **MAFI (Mapa Fílmico de un País)** collection—short documentaries by the Chilean Film Collective MAFI. Working with ~100 annotated films, we're testing how conversational interaction can open new ways to access archival materials.
 
 > *What happens when you can talk to a film collection?* Agente Fílmico explores this question by introducing prompting as a new form of interface for audiovisual exploration.
 
