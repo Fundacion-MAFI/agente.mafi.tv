@@ -309,7 +309,7 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <Link className="flex items-center gap-2 text-foreground" href="/">
             <MafiLogo className="shrink-0" />
@@ -361,7 +361,7 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col px-4 py-16">
+      <main className="flex flex-1 flex-col px-4 pb-16 pt-[calc(theme(spacing.16)_+_3.5rem)]">
         <section className="mx-auto max-w-2xl space-y-6 text-center">
           <h1 className="font-semibold text-3xl tracking-tight md:text-4xl">
             {content.heroTitle}
