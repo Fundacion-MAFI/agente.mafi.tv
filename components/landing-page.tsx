@@ -414,11 +414,11 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
         </section>
 
         {/* FAQ */}
-        <section className="mx-auto mt-20 max-w-3xl">
+        <section className="mx-auto mt-20 w-full max-w-3xl">
           <h2 className="mb-8 font-semibold text-xl md:text-2xl">
             {content.faqTitle}
           </h2>
-          <div className="space-y-0 border-b">
+          <div className="w-full space-y-0 border-b">
             {content.faq.map((item, index) => {
               const value = `faq-${index}`;
               const isOpen = openFaq === value;
@@ -438,8 +438,8 @@ export function LandingPage({ isAuthenticated }: LandingPageProps) {
                       {item.question}
                       <ChevronDownIcon className="size-4 shrink-0 transition-transform duration-200" />
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 overflow-hidden data-[state=closed]:animate-out data-[state=open]:animate-in">
-                      <div className="pb-4 text-muted-foreground text-sm">
+                    <CollapsibleContent className="accordion-content">
+                      <div className="accordion-content-inner pb-4 text-muted-foreground text-sm">
                         {renderFormattedText(item.answer)}
                       </div>
                     </CollapsibleContent>
