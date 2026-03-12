@@ -65,7 +65,7 @@ const CONTENT: Record<Lang, LangContent> = {
       {
         question: "¿Qué es el Agente Fílmico?",
         answer:
-          "El Agente Fílmico es un asistente impulsado por IA que actúa como curador del archivo MAFI. A partir de tus preguntas, selecciona planos, los contextualiza y te propone recorridos personalizados por el material audiovisual.",
+          "Agente Fílmico es una herramienta digital para explorar archivos audiovisuales mediante prompts en lenguaje natural, potenciados por LLMs. Este prototipo muestra la colección MAFI (Mapa Fílmico de un País), que reúne cortometrajes documentales del Colectivo de Cine MAFI. El código es de código abierto con documentación técnica disponible en GitHub para quienes estén interesados en adaptarlo a sus propias colecciones.",
       },
       {
         question: "¿Qué esperar de este prototipo?",
@@ -75,32 +75,32 @@ const CONTENT: Record<Lang, LangContent> = {
       {
         question: "¿En qué idioma habla el Agente Fílmico?",
         answer:
-          "El Agente Fílmico responde en español e inglés, según el idioma de tu pregunta.",
+          "La interfaz está en español, pero el Agente responde en el idioma que utilices. Las películas de MAFI se mantienen en español.",
       },
       {
         question: "¿Cómo usar al Agente Fílmico?",
         answer:
-          'Escribe tu pregunta en lenguaje natural. Por ejemplo: "Muéstrame planos sobre protestas", "Planos grabados cerca de mi ubicación" o "¿Qué planos grabó Antonio Luco?" El Agente te devolverá una selección de planos con enlaces para verlos.',
+          "**Explorando la colección:** Haz preguntas en lenguaje natural y el Agente curará una selección de películas con comentarios contextuales.\n\n**Para profesionales:** Si estás interesado en implementar interfaces similares para colecciones de cine o de patrimonio digital, la documentación técnica y el código están disponibles en nuestro repositorio de GitHub (ver la sección de enlaces más abajo).",
       },
       {
         question: "¿Por qué LLMs para archivos fílmicos?",
         answer:
-          "Los modelos de lenguaje ofrecen nuevas formas de explorar archivos audiovisuales mediante interacción conversacional. Estamos probando cómo el prompting puede abrir posibilidades creativas para acceder a materiales de archivo que las interfaces de búsqueda tradicionales no pueden mostrar fácilmente.",
+          "Aunque pueda parecer trivial tres años después del lanzamiento público de ChatGPT, los LLMs están marcando un cambio significativo en cómo accedemos a archivos al introducir el prompting como una interfaz comparable a las GUIs e incluso a las CLIs. Aunque la tecnología se desarrolla con rapidez (a veces haciendo que las implementaciones parezcan obsoletas), la capacidad de conversar con un archivo fílmico en tiempo real abre posibilidades creativas inexploradas. Este prototipo es fundamental para establecer un enfoque fundacional para artistas, diseñadores e investigadores de medios que exploren esta vía.",
       },
       {
         question: "¿Qué es el colectivo MAFI?",
         answer:
-          "El **Colectivo MAFI** (Museo de Arte y Fotografía Independiente) es un archivo audiovisual que preserva y difunde material fílmico chileno e independiente. Reúne planos, documentales y registros que dan cuenta de la memoria visual del país.\n\nMAFI fue fundado en 2010 por un grupo de cineastas y artistas interesados en crear un espacio para la preservación y circulación de la producción audiovisual independiente. El colectivo opera como un archivo nómade, moviéndose entre diferentes espacios y contextos para hacer su colección accesible a diversas audiencias.\n\nHoy, MAFI sigue creciendo a través de donaciones, colaboraciones y su propia producción, manteniendo un compromiso con la preservación de la memoria audiovisual de Chile y la democratización del acceso a este patrimonio.",
+          "El colectivo Mapa Fílmico de un País (MAFI), fundado en 2010 por los cineastas chilenos Antonio Luco, Christopher Murray, Pablo Núñez e Ignacio Rojas, nació con una visión única: crear un mapa audiovisual integral de Chile. Reuniendo a más de 60 cineastas, MAFI desarrolló un formato distintivo de cortometraje documental, inspirándose en la estética minimalista del cine documental temprano y las cualidades modulares del video digital. El formato MAFI se centró en observaciones breves y potentes, ininterrumpidas y sin comentarios, sobre el paisaje humano del país.\n\nDurante quince años, MAFI produjo más de 360 piezas audiovisuales, realizadas por diversos cineastas chilenos. Estos cortometrajes capturaron una multitud de perspectivas sobre la vida cotidiana en los diversos paisajes sociales y geográficos de Chile, desde el Desierto de Atacama hasta la isla de Chiloé. Al arrojar luz con frecuencia sobre narrativas pasadas por alto por los relatos oficiales, las imágenes del colectivo MAFI han fomentado la reflexión social y creado una memoria visual vital del país.\n\nDespués de dieciséis años de trabajo continuo, MAFI está a punto de concluir sus operaciones. La extensa colección del colectivo captura de manera única un período histórico fundamental en Chile, definido por visiones polarizadas y perspectivas diversas, y ejemplificado notablemente por dos intentos fallidos de establecer una nueva constitución. Este rico archivo de imágenes de una era tumultuosa servirá, sin duda, como un recurso invaluable para futuras generaciones que revisiten y reexaminen la memoria de Chile.",
       },
       {
         question: "¿Puedo ver el trabajo producido por el colectivo MAFI?",
         answer:
-          "Sí. El **Agente Fílmico** te permite explorar el archivo mediante preguntas en lenguaje natural. Pregunta por temas, ubicaciones, autores o momentos históricos y recibirás playlists curatoriales con planos relevantes del archivo.",
+          "Sí. Más allá de los 50 cortometrajes documentales de este prototipo, el colectivo MAFI ha producido más de 360 piezas documentales cortas que han circulado ampliamente en redes sociales, en galerías de arte y en la prensa chilena. El colectivo también ha realizado talleres en terreno con comunidades locales, enfocándose en la alfabetización medial y empoderando a los participantes para que sean más conscientes de su imagen mediada y produzcan sus propios cortometrajes documentales.\n\n**Los proyectos incluyen:**\n\n**MAFI.tv** (documental web, 2012)\nEste proyecto actualmente no está en línea, pero puedes encontrar una colección de sus películas en [mafi.tv](https://mafi.tv/) | [Más información](https://www.idfa.nl/en/film/cb1e18c9-f4a7-40cc-a8dd-6164270e4bfc/mafi.tv-filmic-map-of-a-country)\n\n**Largometrajes documentales:**\n\n**Propaganda** (2014) Un documental observacional que explora la campaña presidencial chilena de 2013 y la creciente desconexión entre la creación de imágenes políticas y la realidad ciudadana durante un período de malestar social. [Trailer](https://vimeo.com/89357040) | [Más información](https://www.visionsdureel.ch/en/film/2014/propaganda/)\n\n**Dios** (2019) En el extremo sur del mundo, el Papa llega para traer la palabra de Dios. Chile lo espera con la crisis religiosa más significativa de su historia. [Trailer](https://vimeo.com/322774407) | [Más información](https://www.visionsdureel.ch/en/film/2019/god/)\n\n**Pampas Marcianas** (2023) es una docu-ficción en la que los habitantes de María Elena, el lugar más seco de la Tierra, son elegidos para ser los primeros en colonizar Marte. El pueblo debate dejar atrás sus raíces, el calor y el colapso económico por una nueva promesa de progreso, esta vez en otro planeta. [Trailer](https://vimeo.com/952169547) | [Más información](https://www.labocine.com/films/pampas-marcianas-martian-pampas)\n\n**Oasis** (2024) Tras un levantamiento popular sin precedentes, Chile redacta una nueva constitución. Una asamblea diversa intenta plasmar en papel los sueños de dignidad y justicia social del pueblo. En un país profundamente polarizado, la promesa de consenso se convierte en su propio espejismo. [Trailer](https://vimeo.com/1006032102) | [Más información](https://www.berlinale.de/en/2024/programme/202409678.html)",
       },
       {
         question: "¿Qué sigue?",
         answer:
-          "Continuamos probando y refinando el prototipo. Tus comentarios y preguntas nos ayudan a mejorar cómo las interfaces conversacionales pueden servir a los archivos fílmicos y sus audiencias.",
+          "Estamos usando el Agente Fílmico para entender cómo los LLMs interactúan con la colección MAFI. Nuestro objetivo es evolucionar este prototipo en una obra de arte que edite algorítmicamente cortometrajes documentales a medida basados en conversaciones entre usuarios y el Agente. Más detalles sobre este proyecto —título en progreso \"Espejismo de un País\"— se compartirán a medida que se desarrolle.",
       },
     ],
     linksTitle: "Enlaces y recursos",
@@ -113,10 +113,10 @@ const CONTENT: Record<Lang, LangContent> = {
       },
     ],
     contactLine:
-      "Contacto: Pablo Núñez ([sitio web](https://thirdeyefiles.net/about/#Contact)) ([LinkedIn](https://www.linkedin.com/in/pnunezpalma/))",
+      "Contacto: Para preguntas, comentarios o actualizaciones sobre este proyecto, contacta a Pablo Núñez a través de su [sitio web](https://thirdeyefiles.net/about/#Contact) o [LinkedIn](https://www.linkedin.com/in/pnunezpalma/).",
     creditsTitle: "Créditos",
     credits:
-      "Pablo Núñez y Antonio Luco: líderes e investigadores del proyecto\nIgnacio Rojas y David Vandenbogaerde: Investigación y Desarrollo\nFilms producidos por el Colectivo MAFI\n\n© 2026 Colectivo MAFI. Todos los derechos reservados\nSoftware: Código abierto bajo licencia MIT\nCon el apoyo de [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl)\nEn colaboración con Netherlands Film Academy, programa [AI Greenhouse](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/)",
+      "Pablo Núñez y Antonio Luco: líderes e investigadores del proyecto\nIgnacio Rojas y David Vandenbogaerde: Investigación y Desarrollo\nFilms producidos por el Colectivo MAFI\n\n© 2026 Colectivo MAFI. Todos los derechos reservados\nSoftware: Código abierto bajo licencia MIT\nCon el apoyo de [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl/en/info)\nEn colaboración con Netherlands Film Academy, [programa AI Greenhouse](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/)",
     copyright: "Colectivo MAFI",
   },
   en: {
@@ -135,42 +135,42 @@ const CONTENT: Record<Lang, LangContent> = {
       {
         question: "What is the Agente Fílmico?",
         answer:
-          "The Agente Fílmico is an AI-powered curatorial agent that lets you explore the MAFI film archive through natural language. It selects shots, contextualizes them and proposes personalized journeys through the audiovisual material.",
+          "Agente Fílmico is a digital tool for exploring audiovisual archives using natural-language prompts powered by LLMs. This prototype showcases the MAFI (Mapa Fílmico de un País) collection, comprising short documentaries by the Film Collective MAFI. The codebase is open source with technical documentation available on GitHub for archives interested in adapting it for their own collections.",
       },
       {
         question: "What to expect from this prototype?",
         answer:
-          "This is an active experiment. The system's behaviour changes frequently as we test and refine it. You can ask questions in natural language and receive curatorial playlists with relevant shots from the archive.",
+          "Prototypes are research tools used to test specific functionalities before a product's full implementation. We're actively using Agente Fílmico to refine its curatorial capacities and interaction style. We are regularly updating the dataset, experimenting with embedding methods, swapping language models, and adjusting system prompts. For this reason, **the Agente you interact with today may behave quite differently next week.**",
       },
       {
         question: "In which language does the Agente Fílmico speak?",
         answer:
-          "The Agente Fílmico responds in both English and Spanish, depending on the language of your question.",
+          "The interface is in Spanish, but the Agente responds in the language you use. Ask your questions in English, Spanish, or other languages, and the agent will reply accordingly. The MAFI films themselves remain in Spanish.",
       },
       {
         question: "How to Use Agente Fílmico?",
         answer:
-          'Type your question in natural language. For example: "Show me shots about protests", "Shots recorded near my location" or "What shots did Antonio Luco record?" The Agent will return a selection of shots with links to watch them.',
+          "**Exploring the collection:** Ask questions in natural language, and the Agente will curate a selection of films with contextual commentary.\n\n**For professionals:** If you're interested in implementing similar interfaces for film or digital heritage collections, technical documentation and code are available on our GitHub (see the links section below).",
       },
       {
         question: "Why LLMs for film archives?",
         answer:
-          "Large language models offer new ways to explore audiovisual archives through conversational interaction. We're testing how prompting can open creative possibilities for accessing archival materials that traditional search interfaces cannot easily surface.",
+          "While it may seem trivial three years after the public release of ChatGPT, LLMs are marking a significant shift in how we access archives by introducing prompting as an interface comparable to GUIs and even CLIs. Although the technology advances quickly (sometimes making implementations feel rapidly outdated), the ability to converse with a film archive in real time opens unexplored creative possibilities. This prototype is instrumental in establishing a foundational approach for artists, designers, and media researchers to explore this avenue.",
       },
       {
         question: "What is the MAFI collective?",
         answer:
-          "The **MAFI Collective** (Museum of Independent Art and Photography) is an audiovisual archive that preserves and disseminates Chilean and independent film material. It brings together shots, documentaries and recordings that document the country's visual memory.\n\nMAFI was founded in 2010 by a group of filmmakers and artists interested in creating a space for the preservation and circulation of independent audiovisual production. The collective operates as a nomadic archive, moving between different spaces and contexts to make its collection accessible to diverse audiences.\n\nToday, MAFI continues to grow through donations, collaborations and its own production, maintaining a commitment to the preservation of Chile's audiovisual memory and the democratization of access to this heritage.",
+          "The Mapa Fílmico de un País (MAFI) collective, founded in 2010 by Chilean filmmakers Antonio Luco, Christopher Murray, Pablo Núñez, and Ignacio Rojas, was born with a unique vision: to create a comprehensive audiovisual map of Chile. Bringing together over 60 filmmakers, MAFI developed a distinctive short documentary format, drawing inspiration from the minimalist aesthetic of early documentary cinema and the modular qualities of digital video. This format centred on brief yet powerful, uninterrupted, and uncommented observations of the country's human landscape.\n\nOver fifteen years, MAFI produced more than 360 audiovisual pieces, authored by a diverse array of Chilean filmmakers. These short films captured a multitude of perspectives on daily life across Chile's varied social and geographical landscapes—from the Atacama Desert to the island of Chiloé. By often shedding light on narratives overlooked by official accounts, MAFI's compelling images fostered social reflection and created a vital visual memory of the country.\n\nAfter sixteen years of dedicated work, MAFI is set to conclude its operations in 2026. The collective's extensive collection uniquely captures a pivotal historical period in Chile, defined by polarised views and diverse perspectives, and strikingly exemplified by the two failed attempts to establish a new constitution. This rich archive of images from a tumultuous era will undoubtedly serve as an invaluable resource for future generations revisiting and re-examining Chile's recent past.",
       },
       {
         question: "Can I see the work produced by the MAFI collective?",
         answer:
-          "Yes. The **Agente Fílmico** lets you explore the archive through natural language questions. Ask about topics, locations, authors or historical moments and you'll receive curatorial playlists with relevant shots from the archive.",
+          "Yes. Beyond the 50 short documentaries in this prototype, the MAFI collective has produced over 360 short documentary pieces that have circulated widely on social media, in art galleries, and in the Chilean press. The collective has also run field workshops with local communities, focusing on media literacy and empowering participants to be more aware of their mediated image and to produce their own short documentaries.\n\n**Projects include:**\n\n**MAFI.tv** (web documentary, 2012)\nThis project is currently not live, but you can find a collection of their films at [mafi.tv](https://mafi.tv/)\n[More info](https://www.idfa.nl/en/film/cb1e18c9-f4a7-40cc-a8dd-6164270e4bfc/mafi.tv-filmic-map-of-a-country)\n\n**Feature-length documentaries:**\n\n**Propaganda** (2014)\nAn observational documentary exploring the 2013 Chilean presidential campaign and the growing disconnect between political image-making and citizen reality during a period of social unrest.\n[Trailer](https://vimeo.com/89357040) | [More info](https://www.visionsdureel.ch/en/film/2014/propaganda/)\n\n**Dios** (2019)\nAt the southern end of the world, the Pope arrives to bring the word of God. Chile awaits him with the most significant religious crisis in its history.\n[Trailer](https://vimeo.com/322774407) | [More info](https://www.visionsdureel.ch/en/film/2019/god/)\n\n**Pampas Marcianas** (2023)\nA docu-fiction where the inhabitants of María Elena, the driest place on Earth, are chosen to be the first to colonize Mars. The town debates leaving behind their roots, the heat, and economic collapse for a new promise of progress—this time on another planet.\n[Trailer](https://vimeo.com/952169547) | [More info](https://www.labocine.com/films/pampas-marcianas-martian-pampas)\n\n**Oasis** (2024)\nFollowing an unprecedented popular uprising, Chile drafts a new constitution. A diverse assembly attempts to put the people's dreams of dignity and social justice on paper. In a deeply polarized country, the promise of consensus becomes its own mirage.\n[Trailer](https://vimeo.com/1006032102) | [More info](https://www.berlinale.de/en/2024/programme/202409678.html)",
       },
       {
         question: "What's Next?",
         answer:
-          "We're continuously testing and refining the prototype. Your feedback and questions help us improve how conversational interfaces can serve film archives and their audiences.",
+          "We're using Agente Fílmico to understand how LLMs interact with the MAFI collection. Our goal is to evolve this prototype into an artwork that algorithmically edits bespoke short documentaries based on conversations between users and the Agente. More details about this project—working title \"Mirage of a Country\"—will be shared as it develops.",
       },
     ],
     linksTitle: "Links & resources",
@@ -183,10 +183,10 @@ const CONTENT: Record<Lang, LangContent> = {
       },
     ],
     contactLine:
-      "Contact: Pablo Núñez ([website](https://thirdeyefiles.net/about/#Contact)) ([LinkedIn](https://www.linkedin.com/in/pnunezpalma/))",
+      "Contact: For questions, comments, or updates about this project, contact Pablo Núñez via his [website](https://thirdeyefiles.net/about/#Contact) or [LinkedIn](https://www.linkedin.com/in/pnunezpalma/).",
     creditsTitle: "Credits",
     credits:
-      "Pablo Núñez and Antonio Luco: project leads and investigators\nIgnacio Rojas and David Vandenbogaerde: Research and Development\nFilms produced by the MAFI Collective\n\n© 2026 MAFI Collective. All rights reserved\nSoftware: Open source under MIT License\nSupported by [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl)\nIn collaboration with Netherlands Film Academy, [AI Greenhouse](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/) program",
+      "Pablo Núñez and Antonio Luco: project leads and investigators\nIgnacio Rojas and David Vandenbogaerde: Research and Development\nFilms produced by the MAFI Collective\n\n© 2026 MAFI Collective. All rights reserved\nSoftware: Open source under MIT License\nSupported by [Stimuleringsfonds Digital Culture](https://www.stimuleringsfonds.nl/en/info)\nIn collaboration with Netherlands Film Academy, [AI Greenhouse programme](https://www.filmacademie.ahk.nl/en/graduates/2025/projects/ai-greenhouse-cultivating-responsible-engagement-with-ai-in-filmmaking/)",
     copyright: "MAFI Collective",
   },
 };
