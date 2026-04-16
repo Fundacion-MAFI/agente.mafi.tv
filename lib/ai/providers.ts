@@ -1,6 +1,16 @@
 import { createGatewayProvider, gateway } from "@ai-sdk/gateway";
+import { createOpenAI } from "@ai-sdk/openai";
 import { customProvider } from "ai";
 import { isTestEnvironment } from "../constants";
+
+const openaiBaseURL = process.env.OPENAI_BASE_URL?.trim();
+
+const openaiProvider = openaiBaseURL
+  ? createOpenAI({
+      baseURL: openaiBaseURL,
+      apiKey: process.env.OPENAI_API_KEY?.trim(),
+    })
+  : null;
 
 const GROK_HOST_PATTERN = /(?:grok|x\.ai)/i;
 
@@ -63,9 +73,15 @@ export const myProvider = isTestEnvironment
     })()
   : customProvider({
       languageModels: {
-        "chat-model": gateway.languageModel("openai/gpt-4o-mini"),
+        "chat-model": openaiProvider
+          ? openaiProvider("gpt-4o-mini")
+          : gateway.languageModel("openai/gpt-4o-mini"),
         "film-agent": filmAgentGateway.languageModel("openai/gpt-4o"),
-        "title-model": gateway.languageModel("openai/gpt-4o-mini"),
-        "artifact-model": gateway.languageModel("openai/gpt-4o-mini"),
+        "title-model": openaiProvider
+          ? openaiProvider("gpt-4o-mini")
+          : gateway.languageModel("openai/gpt-4o-mini"),
+        "artifact-model": openaiProvider
+          ? openaiProvider("gpt-4o-mini")
+          : gateway.languageModel("openai/gpt-4o-mini"),
       },
     });

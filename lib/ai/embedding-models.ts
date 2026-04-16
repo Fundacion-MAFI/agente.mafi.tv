@@ -1,4 +1,14 @@
 import { gateway } from "@ai-sdk/gateway";
+import { createOpenAI } from "@ai-sdk/openai";
+
+const openaiBaseURL = process.env.OPENAI_BASE_URL?.trim();
+
+const openaiProvider = openaiBaseURL
+  ? createOpenAI({
+      baseURL: openaiBaseURL,
+      apiKey: process.env.OPENAI_API_KEY?.trim(),
+    })
+  : null;
 
 /**
  * Supported embedding models with their vector dimensions.
@@ -33,6 +43,9 @@ export function getEmbeddingDimensions(modelId: EmbeddingModelId): number {
 }
 
 export function getEmbeddingModel(modelId: EmbeddingModelId) {
+  if (openaiProvider && modelId.startsWith("openai/")) {
+    return openaiProvider.textEmbeddingModel(modelId.replace("openai/", ""));
+  }
   return gateway.textEmbeddingModel(modelId);
 }
 
