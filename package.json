@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "pnpm db:migrate && pnpm ingest:mafi && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "echo \"Lint disabled for deployment\"",
     "format": "npx ultracite@latest fix",
@@ -16,11 +16,11 @@
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
     "ingest:mafi": "tsx scripts/ingest-mafi-shots.ts",
-    "postinstall": "pnpm db:migrate && pnpm ingest:mafi",
     "test": "echo \"Tests disabled for deployment\""
   },
   "dependencies": {
     "@ai-sdk/gateway": "^1.0.15",
+    "@ai-sdk/openai": "^2.0.102",
     "@ai-sdk/provider": "2.0.0",
     "@ai-sdk/react": "2.0.26",
     "@codemirror/lang-javascript": "^6.2.2",

@@ -24,7 +24,10 @@ import {
 } from "@/lib/ai/mafi-retrieval";
 import { type MafiAnswer, mafiAnswerSchema } from "@/lib/ai/mafi-schema";
 import type { ChatModel } from "@/lib/ai/models";
-import { filmAgentGateway, myProvider } from "@/lib/ai/providers";
+import {
+  filmAgentGateway,
+  openaiProvider,
+} from "@/lib/ai/providers";
 import type { MafiPlaylistDocumentContent } from "@/lib/artifacts/mafi-playlist";
 import {
   isProductionEnvironment,
@@ -52,7 +55,7 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 const ARCHIVO_OFFLINE_MESSAGE =
   "El modo Archivo está temporalmente fuera de línea. Verifica la configuración del AI Gateway y vuelve a intentarlo.";
 
@@ -60,6 +63,7 @@ const DIGITS_REGEX = /^\d+$/;
 const SECONDS_REGEX = /^\d+s$/;
 const HMS_REGEX = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/;
 const HASH_REGEX = /^#/;
+const OPENAI_PREFIX_REGEX = /^openai\//;
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
@@ -548,8 +552,8 @@ export async function POST(request: Request) {
       getAdminSetting("chat.model"),
     ]);
 
-    const archivoRetrievalTimeoutMs = 12_000;
-    const archivoPlaylistTimeoutMs = 28_000;
+    const archivoRetrievalTimeoutMs = 30_000;
+    const archivoPlaylistTimeoutMs = 270_000;
     const archivoRetrievalLimit =
       typeof retrievalLimit === "number" && retrievalLimit >= 1
         ? retrievalLimit
@@ -619,8 +623,9 @@ export async function POST(request: Request) {
           dedupedShots
         );
 
-        const archiveModel =
-          filmAgentGateway.languageModel(archiveModelId);
+        const archiveModel = openaiProvider
+          ? openaiProvider(archiveModelId.replace(OPENAI_PREFIX_REGEX, ""))
+          : filmAgentGateway.languageModel(archiveModelId);
         if (process.env.NODE_ENV !== "test") {
           console.info("[chat] Archivo gateway request", {
             model: archiveModelId,
