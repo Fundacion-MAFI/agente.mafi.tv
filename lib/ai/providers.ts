@@ -3,9 +3,12 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { customProvider } from "ai";
 import { isTestEnvironment } from "../constants";
 
-const openaiBaseURL = process.env.OPENAI_BASE_URL?.trim();
+let openaiBaseURL = process.env.OPENAI_BASE_URL?.trim().replace(/\/v1\/?$/, "");
+if (openaiBaseURL) {
+  openaiBaseURL = `${openaiBaseURL}/v1`;
+}
 
-const openaiProvider = openaiBaseURL
+export const openaiProvider = openaiBaseURL
   ? createOpenAI({
       baseURL: openaiBaseURL,
       apiKey: process.env.OPENAI_API_KEY?.trim(),
@@ -76,7 +79,9 @@ export const myProvider = isTestEnvironment
         "chat-model": openaiProvider
           ? openaiProvider("gpt-4o-mini")
           : gateway.languageModel("openai/gpt-4o-mini"),
-        "film-agent": filmAgentGateway.languageModel("openai/gpt-4o"),
+        "film-agent": openaiProvider
+          ? openaiProvider("gpt-4o")
+          : filmAgentGateway.languageModel("openai/gpt-4o"),
         "title-model": openaiProvider
           ? openaiProvider("gpt-4o-mini")
           : gateway.languageModel("openai/gpt-4o-mini"),

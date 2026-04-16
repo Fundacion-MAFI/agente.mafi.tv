@@ -1,7 +1,10 @@
 import { gateway } from "@ai-sdk/gateway";
 import { createOpenAI } from "@ai-sdk/openai";
 
-const openaiBaseURL = process.env.OPENAI_BASE_URL?.trim();
+let openaiBaseURL = process.env.OPENAI_BASE_URL?.trim().replace(/\/v1\/?$/, "");
+if (openaiBaseURL) {
+  openaiBaseURL = `${openaiBaseURL}/v1`;
+}
 
 const openaiProvider = openaiBaseURL
   ? createOpenAI({
